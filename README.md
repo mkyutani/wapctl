@@ -1,0 +1,2 @@
+# wapctl
+Control Windows applications

@@ -1,0 +1,506 @@
+#!/usr/bin/env python3
+
+import chardet
+import io
+import os
+import re
+import sys
+import argparse
+import subprocess
+from enum import IntEnum
+from subprocess import PIPE, DEVNULL
+
+class Shell:
+
+    def traditional(cmd):
+        cmdline = "cmd.exe /c \"" + cmd + "\""
+        subprocess.Popen(cmdline, shell=True, stdout=DEVNULL, stderr=DEVNULL)
+
+    def ps(cmd):
+        cmdline = "powershell.exe -command \'& {" + cmd + "}\'"
+        proc = subprocess.Popen(cmdline, shell=True, stdout=PIPE)
+        out, err = proc.communicate()
+        return out
+
+class PSArray:
+
+    def __init__(self):
+        self.stream = None
+        self.nextline = None
+
+    def readline(self):
+        if self.stream is None:
+            return None
+        if self.nextline is None:
+            retval = self.stream.readline()
+            if retval is None:
+                return None
+        else:
+            retval = self.nextline
+        line = self.stream.readline()
+        while line is not None and len(line) > 0 and line[0] == " ":
+            retval = retval.rstrip() + line.lstrip()
+            line = self.stream.readline()
+        self.nextline = line
+        return retval
+
+    def build(self, cmd, name_key=None, name_target=None, category_key=None, category=None, prefix=""):
+        self.stream = None
+        self.nextline = None
+
+        name_key_u = name_key.upper() if name_key is not None else None
+        name_target_u = name_target.upper() if name_target is not None else None
+
+        out = Shell.ps(cmd + "| format-list *")
+        if len(out) > 0:
+            coding = chardet.detect(out)["encoding"]
+            if coding is not None:
+                self.stream = io.StringIO(out.decode(coding))
+
+        if self.stream is None:
+            return []
+
+        all_list = []
+        item_alist = {}
+        line = self.readline()
+        while line:
+            line = line.strip()
+            if len(line) > 0:
+                name, value = line.split(':', 1)
+                name = name.strip()
+                name_u = name.upper()
+                value = value.strip()
+                item_alist.update({prefix + name_u: value})
+            else:
+                if len(item_alist) > 0:
+                    if category_key is not None and category is not None:
+                        item_alist.update({category_key: category})
+                    if name_key_u is None or name_target_u is None:
+                        all_list.append(item_alist)
+                    else:
+                        if name_target_u in item_alist[name_key_u].upper():
+                            all_list.append(item_alist)
+                    item_alist = {}
+            line = self.readline()
+
+        if len(item_alist) > 0:
+            if category_key is not None and category is not None:
+                item_alist.update({category_key: category})
+            if name_key_u is None or name_target_u is None:
+                all_list.append(item_alist)
+            else:
+                if name_target_u in item_alist[name_key_u].upper():
+                    all_list.append(item_alist)
+            item_alist = {}
+
+        if name_key_u is not None:
+            all_list.sort(key=lambda x:x[name_key_u].upper())
+
+        return all_list
+
+class Mode:
+
+    class Index(IntEnum):
+        NONE = -1
+        PROCESS = 0
+        APPLICATION = 1
+        APPACKAGE = 2
+        PACKAGE = 3
+        SERVICE = 4
+        STARTUP = 5
+        MAX = 6
+
+    class OpIndex(IntEnum):
+        NONE = -1
+        LIST = 0
+        SHOW = 1
+        START = 2
+        STOP = 3
+        REMOVE = 4
+        MAX = 5
+
+    name_list = ["PROCESS", "APPLICATION", "INSTALLED", "PACKAGE", "SERVICE", "STARTUP"]
+    name_abbrev_list = ["P", "A", "INS", "PKG", "SVC", "RUN"]
+    op_name_list = ["LIST", "SHOW", "START", "STOP", "REMOVE"]
+
+    mode_list = None
+    target_u = None
+    separator = None
+    flag_yes = False
+
+    @classmethod
+    def createModeList(cls, target, sep, flag_yes=False):
+        cls.mode_list = [Process(), Application(), Installed(), Package(), Service(), Startup()]
+        if target is not None:
+            cls.target_u = target.upper()
+        cls.separator = sep
+        cls.flag_yes = flag_yes
+        return cls.mode_list
+
+    def __init__(self):
+        self.object_func_list = [None] * Mode.OpIndex.MAX
+        self.property_func_list = [None] * Mode.OpIndex.MAX
+
+    def sep(self):
+        return self.separator
+
+    def confirmAllTargets(self):
+        if self.flag_yes:
+            return True
+        if self.target_u is None:
+            return input("All targets, ok? [y/N] ").strip() == "y"
+
+    def confirm(self, op_name, name, value, no_by_default = False):
+        if self.flag_yes:
+            return True
+        message = "{} {} ({}), ok?".format(op_name, name, value)
+        if no_by_default == True:
+            return input(message + " [y/N] ").strip() == "y"
+        else:
+            return input(message + " [Y/n] ").strip() != "n"
+
+    def warningNoCommandCandidates(self, name):
+        print("{}: No command candidates found.".format(name), file=sys.stderr)
+
+    def op(self, op_no):
+        if op_no >= Mode.OpIndex.MAX:
+            return False
+        if self.object_func_list[op_no] is None and self.property_func_list[op_no] is None:
+            return False
+        object_list = self.prepareObjectList(op_no)
+        if self.object_func_list[op_no] is not None:
+            for o in object_list:
+                self.object_func_list[op_no](o)
+        if self.property_func_list[op_no] is not None:
+            if op_no != Mode.OpIndex.LIST and self.confirmAllTargets() == False:
+                return False
+            for o in object_list:
+                props = self.prepareProperties(op_no, o)
+                if props is not None:
+                    self.property_func_list[op_no](props)
+        return True
+
+    def createObjectList(self, cmd, name_key_u, category=None):
+        ps = PSArray()
+        return ps.build(cmd, name_key=name_key_u, name_target=self.target_u, category_key="CATEGORY", category=category)
+
+    def createPropertiesAlist(self, cmd, prefix=""):
+        ps = PSArray()
+        list = ps.build(cmd, prefix=prefix)
+        if len(list) > 0:
+            return list[0]
+        else:
+            return None
+
+class Process(Mode):
+
+    def __init__(self):
+        super().__init__()
+        self.object_func_list[Mode.OpIndex.LIST] = self.doList
+        self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
+        self.property_func_list[Mode.OpIndex.STOP] = self.doStop
+
+    def prepareObjectList(self, op_no):
+        cmd = "get-process | select-object id, processname"
+        name_key_u = "PROCESSNAME"
+        return self.createObjectList(cmd, name_key_u)
+
+    def prepareProperties(self, op_no, o):
+        cmd = "get-process -id " + o.get("ID")
+        cmd_wmi = "get-wmiobject win32_process | where-object processid -eq " + o.get("ID")
+        cmd_owner = "(get-wmiobject win32_process | where-object processid -eq " + o.get("ID") + ").getowner()"
+        props = o
+        props.update(self.createPropertiesAlist(cmd, prefix="X_"))
+        props.update(self.createPropertiesAlist(cmd_wmi, prefix="WMI_"))
+        props.update(self.createPropertiesAlist(cmd_owner, prefix="OWNER_"))
+        return props
+
+    def doList(self, o):
+        print(o.get("PROCESSNAME"))
+
+    def doShow(self, p):
+        domain = p.get("OWNER_DOMAIN")
+        owner = p.get("OWNER_USER") or ""
+        if domain is not None:
+            owner = domain + "\\" + owner
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}".format(self.sep(), p.get("PROCESSNAME"), p.get("ID"), owner, p.get("WMI_COMMANDLINE") or "", p.get("X_PRODUCT") or "", p.get("X_COMPANY") or ""))
+
+    def doStop(self, p):
+        if self.confirm("Stop", p.get("PROCESSNAME"), p.get("ID")):
+            Shell.ps("stop-process -id " + p.get("ID"))
+
+class Application(Mode):
+        
+    def __init__(self):
+        super().__init__()
+        self.object_func_list[Mode.OpIndex.LIST] = self.doList
+        self.object_func_list[Mode.OpIndex.SHOW] = self.doShow
+        self.object_func_list[Mode.OpIndex.START] = self.doStart
+
+    def prepareObjectList(self, op_no):
+        cmd = "(new-object -com shell.application).namespace(\"shell:appsfolder\").items() | select-object name, path"
+        name_key_u = "NAME"
+        return self.createObjectList(cmd, name_key_u)
+
+    def doList(self, o):
+        print(o.get("NAME"))
+
+    def doShow(self, o):
+        print("{1}{0}{2}".format(self.sep(), o.get("NAME"), o.get("PATH")))
+
+    def doStart(self, o):
+        if o.get("NAME") is None:
+            self.warningNoCommandCandidates(o.get("NAME"))
+        else:
+            if self.confirm("Run", o.get("NAME"), o.get("PATH")):
+                Shell.ps("start-process \"shell:appsfolder\\" + o.get("PATH") + "\"")
+
+class Installed(Mode):
+        
+    def __init__(self):
+        super().__init__()
+        self.object_func_list[Mode.OpIndex.LIST] = self.doList
+        self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
+        self.property_func_list[Mode.OpIndex.START] = self.doStart
+        self.property_func_list[Mode.OpIndex.REMOVE] = self.doRemove
+
+    def prepareObjectList(self, op_no):
+        cmd = "get-childitem -path (\"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\", \"HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\", \"HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\") | % { get-itemproperty $_.pspath | select-object pschildname, displayname}"
+        name_key_u = "DISPLAYNAME"
+        return self.createObjectList(cmd, name_key_u)
+
+    def prepareProperties(self, op_no, o):
+        if len(o.get("DISPLAYNAME")) == 0:
+            return None
+        else:
+            cmd = "get-childitem -path (\"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\", \"HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\", \"HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\") | % { get-itemproperty $_.pspath | where-object { $_.displayname -eq \"" + o.get("DISPLAYNAME") + "\" }}"
+            props = o
+            x = self.createPropertiesAlist(cmd, prefix="X_")
+            if x is not None:
+                props.update(x) 
+            return props
+
+    def doList(self, o):
+        if len(o.get("DISPLAYNAME")) > 0:
+            print(o.get("DISPLAYNAME"))
+
+    def doShow(self, p):
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}".format(self.sep(), p.get("DISPLAYNAME"), p.get("X_DISPLAYNAME") or "", p.get("X_DISPLAYVERSION") or "", p.get("X_DISPLAYICON") or "", p.get("X_PUBLISHER") or ""))
+
+    def doStart(self, p):
+        if p.get("X_DISPLAYICON") is None:
+            self.warningNoCommandCandidates(p.get("DISPLAYNAME"))
+        else:
+            if self.confirm("Run", p.get("DISPLAYNAME"), p.get("X_DISPLAYICON")):
+                Shell.traditional(p.get("X_DISPLAYICON"))
+
+    def doRemove(self, p):
+        if p.get("X_UNINSTALLSTRING") is None:
+            self.warningNoCommandCandidates(p.get("DISPLAYNAME"))
+        else:
+            if self.confirm("Uninstall", p.get("DISPLAYNAME"), p.get("X_UNINSTALLSTRING"), no_by_default=True):
+                Shell.traditional(p.get("X_UNINSTALLSTRING"))
+
+class Package(Mode):
+
+    def __init__(self):
+        super().__init__()
+        self.object_func_list[Mode.OpIndex.LIST] = self.doList
+        self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
+        self.property_func_list[Mode.OpIndex.START] = self.doStart
+        self.object_func_list[Mode.OpIndex.REMOVE] = self.doRemove
+
+    def prepareObjectList(self, op_no):
+        cmd = "get-appxpackage *"
+        name_key_u = "NAME"
+        return self.createObjectList(cmd, name_key_u)
+
+    def prepareProperties(self, op_no, o):
+        cmd = "get-appxpackage * | where-object packagefullname -eq \"" + o.get("PACKAGEFULLNAME") + "\""
+        cmd_pkg = "(get-appxpackage * | where-object packagefullname -eq \"" + o.get("PACKAGEFULLNAME") + "\" | get-appxpackagemanifest).package.properties"
+        cmd_ap = "(get-appxpackage * | where-object packagefullname -eq \"" + o.get("PACKAGEFULLNAME") + "\" | get-appxpackagemanifest).package.applications.application"
+        props = o
+        x = self.createPropertiesAlist(cmd, prefix="X_")
+        pkg = self.createPropertiesAlist(cmd_pkg, prefix="PKG_")
+        ap = self.createPropertiesAlist(cmd_ap, prefix="AP_")
+        if x is not None:
+            props.update(x)
+        if pkg is not None:
+            props.update(pkg)
+        if ap is not None:
+            props.update(ap)
+        return props
+
+    def doList(self, o):
+        print(o.get("NAME"))
+
+    def doShow(self, p):
+        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), p.get("NAME"), p.get("PACKAGEFULLNAME"), p.get("PKG_PUBLISHERDISPLAYNAME") or "", p.get("AP_EXECUTABLE") or ""))
+
+    def doStart(self, p):
+        if p.get("X_PACKAGEFAMILYNAME") is None:
+            self.warningNoCommandCandidates(p.get("NAME"))
+        else:
+            if self.confirm("Start", p.get("NAME"), p.get("X_PACKAGEFAMILYNAME")):
+                Shell.ps("start-process \"shell:appsfolder\\" + p.get("X_PACKAGEFAMILYNAME") + "!" + p.get("AP_ID") + "\"")
+
+    def doRemove(self, o):
+        if o.get("PACKAGEFULLNAME") is None:
+            self.warningNoCommandCandidates(o.get("NAME"))
+        else:
+            if self.confirm("Uninstall", o.get("NAME"), o.get("PACKAGEFULLNAME"), no_by_default=True):
+                Shell.ps("remove-appxpackage \"" + o.get("PACKAGEFULLNAME") + "\"")
+
+class Service(Mode):
+
+    def __init__(self):
+        super().__init__()
+        self.object_func_list[Mode.OpIndex.LIST] = self.doList
+        self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
+        self.property_func_list[Mode.OpIndex.START] = self.doStart
+        self.property_func_list[Mode.OpIndex.STOP] = self.doStop
+
+    def prepareObjectList(self, op_no):
+        cmd = "get-service | select-object name, displayname"
+        name_key_u = "DISPLAYNAME"
+        return self.createObjectList(cmd, name_key_u)
+
+    def prepareProperties(self, op_no, o):
+        cmd = "get-wmiobject win32_service | where-object name -eq \"" + o.get("NAME") + "\" | select-object name, displayname, processid, startmode, state, pathname"
+        props = o
+        x = self.createPropertiesAlist(cmd, prefix="X_")
+        if x is not None:
+            props.update(x)
+        return props
+
+    def doList(self, o):
+        print(o.get("DISPLAYNAME"))
+
+    def doShow(self, p):
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}".format(self.sep(), p.get("DISPLAYNAME"), p.get("X_NAME") or "", p.get("X_STARTMODE") or "", p.get("X_STATE") or "", p.get("X_PROCESSID") or "", p.get("X_PATHNAME") or ""))
+
+    def doStart(self, p):
+        if p.get("X_NAME") is None:
+            self.warningNoCommandCandidates(p.get("DISPLAYNAME"))
+        else:
+            if self.confirm("Start", p.get("DISPLAYNAME"), p.get("X_NAME")):
+                Shell.ps("(get-wmiobject win32_service | where-object name -eq \"" + p.get("X_NAME") + "\").startservice()")
+
+    def doStop(self, p):
+        if p.get("X_NAME") is None:
+            self.warningNoCommandCandidates(p.get("DISPLAYNAME"))
+        else:
+            if self.confirm("Stop", p.get("DISPLAYNAME"), p.get("X_NAME")):
+                Shell.ps("(get-wmiobject win32_service | where-object name -eq \"" + p.get("X_NAME") + "\").stopservice()")
+
+class Startup(Mode):
+
+    def __init__(self):
+        super().__init__()
+        self.object_func_list[Mode.OpIndex.LIST] = self.doList
+        self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
+        self.property_func_list[Mode.OpIndex.START] = self.doStart
+        self.property_func_list[Mode.OpIndex.REMOVE] = self.doRemove
+
+    def prepareObjectList(self, op_no):
+        cmd_reg_1 = "$key = get-item \"HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\"; $key.getvaluenames() | % { $n = $_; $o = (1 | select-object -property id, name); $o.id = $key.pspath + \"\\\" + $n; $o.name = $n; $o }"
+        cmd_reg_2 = "$key = get-item \"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\"; $key.getvaluenames() | % { $n = $_; $o = (1 | select-object -property id, name); $o.id = $key.pspath + \"\\\" + $n; $o.name = $n; $o }"
+        cmd_reg_3 = "$key = get-item \"HKLM:\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Run\"; $key.getvaluenames() | % { $n = $_; $o = (1 | select-object -property id, name); $o.id = $key.pspath + \"\\\" + $n; $o.name = $n; $o }"
+        cmd_shell_1 = "(new-object -com shell.application).namespace(\"shell:startup\").items() | % { $o = (1 | select-object -property id, name); $o.id = \"Shell:Startup\\\" + $_.name; $o.name= $_.name; $o }"
+        cmd_shell_2 = "(new-object -com shell.application).namespace(\"shell:common startup\").items() | % { $o = (1 | select-object -property id, name); $o.id = \"Shell:Common Startup\\\" + $_.name; $o.name= $_.name; $o }"
+        name_key_u = "NAME"
+
+        object_list_reg_1 = self.createObjectList(cmd_reg_1, name_key_u, category="REG")
+        object_list_reg_2 = self.createObjectList(cmd_reg_2, name_key_u, category="REG")
+        object_list_reg_3 = self.createObjectList(cmd_reg_3, name_key_u, category="REG")
+        object_list_shell_1 = self.createObjectList(cmd_shell_1, name_key_u, category="SHELL")
+        object_list_shell_2 = self.createObjectList(cmd_shell_2, name_key_u, category="SHELL")
+        object_list = object_list_reg_1 + object_list_reg_2 + object_list_reg_3 + object_list_shell_1 + object_list_shell_2
+        return sorted(object_list, key=lambda x:x["NAME"].upper())
+
+    def prepareProperties(self, op_no, o):
+        if o.get("CATEGORY") == "REG":
+            cmd = "$key = get-item \"" + o.get("ID").rsplit("\\", 1)[0] + "\"; $n = \"" + o.get("NAME") + "\"; $o = (1 | select-object -property name, value, type); $o.name = $n; $o.value = $key.getvalue($n); $o.type = $key.getvaluekind($n); $o"
+        else:
+            pn = o.get("ID").split("\\", 1)
+            cmd = "(new-object -com shell.application).namespace(\"" + pn[0] + "\").items() | where-object name -eq \"" + pn[1] + "\" | % { $o = (1 | select-object -property name, type, value, id); $o.name= $_.name; $o.type = $_.type; $o.value = $_.path; $o }"
+        props = o
+        x = self.createPropertiesAlist(cmd, prefix="X_")
+        if x is not None:
+            props.update(x)
+        return props
+
+    def doList(self, o):
+        print(o.get("NAME"))
+
+    def doShow(self, p):
+        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), p.get("NAME"), p.get("X_VALUE") or "", p.get("X_TYPE") or "", p.get("ID").rsplit("\\", 1)[0]))
+
+    def doStart(self, p):
+        if p.get("X_VALUE") is None:
+            self.warningNoCommandCandidates(p.get("NAME"))
+        else:
+            if self.confirm("Start", p.get("NAME"), p.get("X_VALUE")):
+                Shell.traditional(p.get("X_VALUE"));
+
+    def doRemove(self, p):
+        if p.get("CATEGORY") == "REG":
+            kv = p.get("ID").rsplit("\\", 1)
+            if self.confirm("Remove", p.get("NAME"), p.get("ID"), no_by_default=True):
+                Shell.ps("remove-itemproperty \"" + kv[0] + "\" -name \"" + kv[1] + "\"")
+        else:
+            if p.get("X_VALUE") is None:
+                self.warningNoCommandCandidates(p.get("NAME"))
+            else:
+                if self.confirm("Remove", p.get("NAME"), p.get("X_VALUE"), no_by_default=True):
+                    Shell.ps("remove-item \"" + p.get("X_VALUE") + "\"")
+
+if __name__ == "__main__":
+
+    msg_desc = "Windows application control"
+    msg_epilog = """Example:
+  {0} p|process [list|show|stop [<name>]]
+  {0} a|appilcation [list|show|start [<name>]]
+  {0} ins|installed [list|show|remove [<name>]]
+  {0} pkg|package [list|show|start|remove [<name>]]
+  {0} svc|service [list|show|start|stop [<name>]]
+  {0} run|startup [list|show|start|remove [<name>]]""".format(os.path.basename(__file__))
+
+    parser = argparse.ArgumentParser(description=msg_desc, epilog=msg_epilog, formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument("mode", help="""p|process     Running processes
+a|application Application programs in Shell:AppsFolder
+ins|installed Installed applications in 'Uninstall' registry
+pkg|package   Packages registered in Windows Store
+svc|service   Win32 Services
+run|startup   Startup programs in Shell:Startup and 'Run' registry""")
+    parser.add_argument("op", nargs="?", default=Mode.op_name_list[Mode.OpIndex.LIST], help="list|show|start|stop|remove")
+    parser.add_argument("target", nargs="?", default=None, help="target name")
+    parser.add_argument("-s", "--separator", nargs=1, default=" ", help="field separator for output")
+    parser.add_argument("-y", "--yes", action="store_true", help="assume yes")
+    args = parser.parse_args()
+
+    mode_no = Mode.Index.NONE
+    mu = args.mode.upper()
+    for (i, c) in enumerate(Mode.name_list):
+        if mu == c:
+            mode_no = i
+    if mode_no == Mode.Index.NONE:
+        for (i, c) in enumerate(Mode.name_abbrev_list):
+            if mu == c:
+                mode_no = i
+
+    op_no = Mode.OpIndex.NONE
+    ou = args.op.upper()
+    for (i, c) in enumerate(Mode.op_name_list):
+        if ou == c:
+            op_no = i
+
+    if mode_no == Mode.Index.NONE or op_no == Mode.OpIndex.NONE:
+        parser.print_help(file=sys.stderr)
+        exit(1)
+
+    mode_list = Mode.createModeList(args.target, args.separator[0], args.yes)
+    if mode_list[mode_no].op(op_no) == False:
+        exit(1)
+
+    exit(0)

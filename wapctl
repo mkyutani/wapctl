@@ -261,7 +261,6 @@ class Installed(Mode):
         super().__init__()
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
         self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
-        self.property_func_list[Mode.OpIndex.START] = self.doStart
         self.property_func_list[Mode.OpIndex.REMOVE] = self.doRemove
 
     def prepareObjectList(self, op_no):
@@ -286,13 +285,6 @@ class Installed(Mode):
 
     def doShow(self, p):
         print("{1}{0}{2}{0}{3}{0}{4}{0}{5}".format(self.sep(), p.get("DISPLAYNAME"), p.get("X_DISPLAYNAME") or "", p.get("X_DISPLAYVERSION") or "", p.get("X_DISPLAYICON") or "", p.get("X_PUBLISHER") or ""))
-
-    def doStart(self, p):
-        if p.get("X_DISPLAYICON") is None:
-            self.warningNoCommandCandidates(p.get("DISPLAYNAME"))
-        else:
-            if self.confirm("Run", p.get("DISPLAYNAME"), p.get("X_DISPLAYICON")):
-                Shell.traditional(p.get("X_DISPLAYICON"))
 
     def doRemove(self, p):
         if p.get("X_UNINSTALLSTRING") is None:

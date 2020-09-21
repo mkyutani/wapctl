@@ -260,38 +260,27 @@ class Installed(Mode):
     def __init__(self):
         super().__init__()
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
-        self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
-        self.property_func_list[Mode.OpIndex.REMOVE] = self.doRemove
+        self.object_func_list[Mode.OpIndex.SHOW] = self.doShow
+        self.object_func_list[Mode.OpIndex.REMOVE] = self.doRemove
 
     def prepareObjectList(self, op_no):
-        cmd = "get-childitem -path (\"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\", \"HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\", \"HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\") | % { get-itemproperty $_.pspath | select-object pschildname, displayname}"
-        name_key_u = "DISPLAYNAME"
+        cmd = "get-item (\"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\", \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\", \"HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\") |% { $k = $_; $k.getvalue(\"UninstallString\") |% { if ($_ -ne $null) { $o = (1 | select -property KEY, NAME, VERSION, PUBLISHER, UNINSTALL); $o.key = $k.pspath; $o.name = $k.getvalue(\"DisplayName\"); $o.version = $k.getvalue(\"DisplayVersion\"); $o.publisher = $k.getvalue(\"Publisher\"); $o.uninstall = $_; $o }}}"
+        name_key_u = "NAME"
         return self.createObjectList(cmd, name_key_u)
 
-    def prepareProperties(self, op_no, o):
-        if len(o.get("DISPLAYNAME")) == 0:
-            return None
-        else:
-            cmd = "get-childitem -path (\"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\", \"HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\", \"HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\") | % { get-itemproperty $_.pspath | where-object { $_.displayname -eq \"" + o.get("DISPLAYNAME") + "\" }}"
-            props = o
-            x = self.createPropertiesAlist(cmd, prefix="X_")
-            if x is not None:
-                props.update(x) 
-            return props
-
     def doList(self, o):
-        if len(o.get("DISPLAYNAME")) > 0:
-            print(o.get("DISPLAYNAME"))
+        if len(o.get("NAME")) > 0:
+            print(o.get("NAME"))
 
-    def doShow(self, p):
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}".format(self.sep(), p.get("DISPLAYNAME"), p.get("X_DISPLAYNAME") or "", p.get("X_DISPLAYVERSION") or "", p.get("X_DISPLAYICON") or "", p.get("X_PUBLISHER") or ""))
+    def doShow(self, o):
+        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), o.get("NAME") or "", o.get("VERSION") or "", o.get("PUBLISHER") or "", o.get("UNINSTALL") or ""))
 
-    def doRemove(self, p):
-        if p.get("X_UNINSTALLSTRING") is None:
-            self.warningNoCommandCandidates(p.get("DISPLAYNAME"))
+    def doRemove(self, o):
+        if o.get("UNINSTALL") is None:
+            self.warningNoCommandCandidates(o.get("NAME"))
         else:
-            if self.confirm("Uninstall", p.get("DISPLAYNAME"), p.get("X_UNINSTALLSTRING"), no_by_default=True):
-                Shell.traditional(p.get("X_UNINSTALLSTRING"))
+            if self.confirm("Uninstall", o.get("NAME"), o.get("UNINSTALL"), no_by_default=True):
+                Shell.traditional(o.get("UNINSTALL"))
 
 class Package(Mode):
 

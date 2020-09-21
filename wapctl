@@ -104,7 +104,7 @@ class Mode:
         NONE = -1
         PROCESS = 0
         APPLICATION = 1
-        APPACKAGE = 2
+        INSTALLED = 2
         PACKAGE = 3
         SERVICE = 4
         STARTUP = 5

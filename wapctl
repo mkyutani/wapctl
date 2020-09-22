@@ -201,29 +201,27 @@ class Process(Mode):
         self.property_func_list[Mode.OpIndex.STOP] = self.doStop
 
     def prepareObjectList(self, op_no):
-        cmd = "get-process | select-object id, processname"
+        cmd = "get-process | select id, processname"
         name_key_u = "PROCESSNAME"
         return self.createObjectList(cmd, name_key_u)
 
     def prepareProperties(self, op_no, o):
-        cmd = "get-process -id " + o.get("ID")
-        cmd_wmi = "get-wmiobject win32_process | where-object processid -eq " + o.get("ID")
-        cmd_owner = "(get-wmiobject win32_process | where-object processid -eq " + o.get("ID") + ").getowner()"
+        cmd = "get-process -id " + o.get("ID") + " |%{ $p = $_; get-ciminstance -classname Win32_Process -namespace root\cimv2 -filter \"processid = " + o.get("ID") + "\" |% { $u = (invoke-cimmethod -inputobject $_ -methodname getowner); $o = (1 | select -property domain, user, cmd, priority, product, company); $o.domain = $u.domain; $o.user = $u.user; $o.cmd = $_.commandline; $o.priority = $_.priority; $o.product = $p.product; $o.company = $p.company; $o }}"
         props = o
-        props.update(self.createPropertiesAlist(cmd, prefix="X_"))
-        props.update(self.createPropertiesAlist(cmd_wmi, prefix="WMI_"))
-        props.update(self.createPropertiesAlist(cmd_owner, prefix="OWNER_"))
+        cim = self.createPropertiesAlist(cmd, prefix="X_")
+        if cim is not None:
+            props.update(cim)
         return props
 
     def doList(self, o):
         print(o.get("PROCESSNAME"))
 
     def doShow(self, p):
-        domain = p.get("OWNER_DOMAIN")
-        owner = p.get("OWNER_USER") or ""
+        domain = p.get("X_DOMAIN")
+        owner = p.get("X_USER") or ""
         if domain is not None:
             owner = domain + "\\" + owner
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}".format(self.sep(), p.get("PROCESSNAME"), p.get("ID"), owner, p.get("WMI_COMMANDLINE") or "", p.get("X_PRODUCT") or "", p.get("X_COMPANY") or ""))
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}".format(self.sep(), p.get("PROCESSNAME"), p.get("ID"), p.get("X_PRIORITY") or "", owner, p.get("X_PRODUCT") or "", p.get("X_COMPANY") or "", p.get("X_CMD") or ""))
 
     def doStop(self, p):
         if self.confirm("Stop", p.get("PROCESSNAME"), p.get("ID")):

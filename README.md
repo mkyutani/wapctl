@@ -31,7 +31,7 @@ You can also specify the `target` parameter which specifies the complete or part
 
 You cannot show some information and control targets (eg. Win32 services) without administrator privileges.  Let you become an account with administrator privileges and run-as-administrator WSL bash.
 
-### Running process
+### Running processes
 
 You can list, show information and stop the running processes with the complete or partial name of processes.
 
@@ -55,7 +55,7 @@ docker-mutagen
 
 ```bash
 $ wapctl p show 'Docker Desktop'
-Docker Desktop 812 8 AMMONITE\black Docker Desktop Docker Desktop "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+Docker Desktop 812 8 DOMAIN\account Docker Desktop Docker Desktop "C:\Program Files\Docker\Docker\Docker Desktop.exe"
 ```
 
 * Stop the running processes.
@@ -111,7 +111,7 @@ Slack
 
 ```bash
 $ wapctl ins show slack
-Slack 4.9.0 Slack Technologies Inc. "C:\Users\black\AppData\Local\slack\Update.exe" --uninstall
+Slack 4.9.0 Slack Technologies Inc. "C:\Users\account\AppData\Local\slack\Update.exe" --uninstall
 ```
 
 * Uninstall the installed applications.

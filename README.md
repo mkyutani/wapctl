@@ -95,7 +95,7 @@ Run Zoom (zoom.us.Zoom Video Meetings), ok? [Y/n]
 
 ### Installed applications in 'Uninstall' registry
 
-You can list, show information, start and remove (uninstall) the installed applications in 'Uninstall' registry.
+You can list, show information, and remove (uninstall) the installed applications in 'Uninstall' registry.
 
 * List the installed applications.
 
@@ -107,18 +107,11 @@ $ wapctl ins list slack
 Slack
 ```
 
-* Show information of the installed applications. Output columns mean (1)application name, (2)application version, and (3)publisher name, respectively.
+* Show information of the installed applications. Output columns mean (1)application name, (2)application version, (3)publisher name, and (4)uninstall command, respectively.
 
 ```bash
 $ wapctl ins show slack
-Slack Slack 4.9.0 C:\Users\account\AppData\Local\slack\app.ico Slack Technologies Inc.
-```
-
-* Try to start the installed applications. Wapctl try to start applications with icon files. (maybe executable files)
-
-```bash
-$ $ wapctl ins start slack
-Run Slack (C:\Users\account\AppData\Local\slack\app.ico), ok? [Y/n] # Failure in this case
+Slack 4.9.0 Slack Technologies Inc. "C:\Users\black\AppData\Local\slack\Update.exe" --uninstall
 ```
 
 * Uninstall the installed applications.

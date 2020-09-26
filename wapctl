@@ -140,6 +140,7 @@ class Mode:
     def __init__(self):
         self.object_func_list = [None] * Mode.OpIndex.MAX
         self.property_func_list = [None] * Mode.OpIndex.MAX
+        self.is_properties_batch = False
 
     def sep(self):
         return self.separator
@@ -174,15 +175,24 @@ class Mode:
         if self.property_func_list[op_no] is not None:
             if op_no != Mode.OpIndex.LIST and self.confirmAllTargets() == False:
                 return False
-            for o in object_list:
-                props = self.prepareProperties(op_no, o)
-                if props is not None:
-                    self.property_func_list[op_no](props)
+            if self.is_properties_batch is True:
+                props_list = self.preparePropertiesList(op_no, object_list)
+                for p in props_list:
+                    self.property_func_list[op_no](p)
+            else:
+                for o in object_list:
+                    props = self.prepareProperties(op_no, o)
+                    if props is not None:
+                        self.property_func_list[op_no](props)
         return True
 
     def createObjectList(self, cmd, name_key_u, category=None):
         ps = PSArray()
         return ps.build(cmd, name_key=name_key_u, name_target=self.target_u, category_key="CATEGORY", category=category)
+
+    def createPropertiesList(self, cmd, prefix=""):
+        ps = PSArray()
+        return ps.build(cmd, prefix=prefix)
 
     def createPropertiesAlist(self, cmd, prefix=""):
         ps = PSArray()
@@ -196,6 +206,7 @@ class Process(Mode):
 
     def __init__(self):
         super().__init__()
+        self.is_properties_batch = True
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
         self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
         self.property_func_list[Mode.OpIndex.STOP] = self.doStop
@@ -205,23 +216,24 @@ class Process(Mode):
         name_key_u = "PROCESSNAME"
         return self.createObjectList(cmd, name_key_u)
 
-    def prepareProperties(self, op_no, o):
-        cmd = "get-process -id " + o.get("ID") + " |%{ $p = $_; get-ciminstance -classname Win32_Process -namespace root\cimv2 -filter \"processid = " + o.get("ID") + "\" |% { $u = (invoke-cimmethod -inputobject $_ -methodname getowner); $o = (1 | select -property domain, user, cmd, priority, product, company); $o.domain = $u.domain; $o.user = $u.user; $o.cmd = $_.commandline; $o.priority = $_.priority; $o.product = $p.product; $o.company = $p.company; $o }}"
-        props = o
-        cim = self.createPropertiesAlist(cmd, prefix="X_")
-        if cim is not None:
-            props.update(cim)
-        return props
+    def preparePropertiesList(self, op_no, olist):
+        sep = ""
+        idlist = ""
+        for o in olist:
+            idlist = idlist + sep + o.get("ID")
+            sep = ","
+        cmd = "get-process -id " + idlist + " |%{ $p = $_; $x = $_.id; get-ciminstance -classname Win32_Process -namespace root\cimv2 -filter \"processid = $x\" |% { $u = (invoke-cimmethod -inputobject $_ -methodname getowner); $o = (1 | select -property id, processname, domain, user, cmd, priority, product, company); $o.id = $p.id; $o.processname = $p.processname; $o.domain = $u.domain; $o.user = $u.user; $o.cmd = $_.commandline; $o.priority = $_.priority; $o.product = $p.product; $o.company = $p.company; $o }}"
+        return self.createPropertiesList(cmd)
 
     def doList(self, o):
         print(o.get("PROCESSNAME"))
 
     def doShow(self, p):
-        domain = p.get("X_DOMAIN")
-        owner = p.get("X_USER") or ""
+        domain = p.get("DOMAIN")
+        owner = p.get("USER") or ""
         if domain is not None:
             owner = domain + "\\" + owner
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}".format(self.sep(), p.get("PROCESSNAME"), p.get("ID"), p.get("X_PRIORITY") or "", owner, p.get("X_PRODUCT") or "", p.get("X_COMPANY") or "", p.get("X_CMD") or ""))
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}".format(self.sep(), p.get("PROCESSNAME"), p.get("ID"), p.get("PRIORITY") or "", owner, p.get("PRODUCT") or "", p.get("COMPANY") or "", p.get("CMD") or ""))
 
     def doStop(self, p):
         if self.confirm("Stop", p.get("PROCESSNAME"), p.get("ID")):

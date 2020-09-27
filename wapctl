@@ -17,7 +17,7 @@ class Shell:
         subprocess.Popen(cmdline, shell=True, stdout=DEVNULL, stderr=DEVNULL)
 
     def ps(cmd):
-        cmdline = "powershell.exe -command \'& {" + cmd + "}\'"
+        cmdline = "powershell.exe -command \"& {" + cmd + "}\""
         proc = subprocess.Popen(cmdline, shell=True, stdout=PIPE)
         out, err = proc.communicate()
         return out
@@ -224,7 +224,7 @@ class Process(Mode):
         for o in olist:
             idlist = idlist + sep + o.get("ID")
             sep = ","
-        cmd = "get-process -id " + idlist + " |%{ $p = $_; $x = $_.id; get-ciminstance -classname Win32_Process -namespace root\cimv2 -filter \"processid = $x\" |% { $u = (invoke-cimmethod -inputobject $_ -methodname getowner); $o = (1 | select -property id, processname, domain, user, cmd, priority, product, company); $o.id = $p.id; $o.processname = $p.processname; $o.domain = $u.domain; $o.user = $u.user; $o.cmd = $_.commandline; $o.priority = $_.priority; $o.product = $p.product; $o.company = $p.company; $o }}"
+        cmd = "get-process -id " + idlist + " |%{ \$p = \$_; \$x = \$_.id; get-ciminstance -classname Win32_Process -namespace root\\cimv2 -filter \\\"processid = \$x\\\" |% { \$u = (invoke-cimmethod -inputobject \$_ -methodname getowner); \$o = (1 | select -property id, processname, domain, user, cmd, priority, product, company); \$o.id = \$p.id; \$o.processname = \$p.processname; \$o.domain = \$u.domain; \$o.user = \$u.user; \$o.cmd = \$_.commandline; \$o.priority = \$_.priority; \$o.product = \$p.product; \$o.company = \$p.company; \$o }}"
         return self.createPropertiesList(cmd)
 
     def doList(self, o):
@@ -250,7 +250,7 @@ class Application(Mode):
         self.object_func_list[Mode.OpIndex.START] = self.doStart
 
     def prepareObjectList(self):
-        cmd = "(new-object -com shell.application).namespace(\"shell:appsfolder\").items() | select-object name, path"
+        cmd = "(new-object -com shell.application).namespace(\\\"shell:appsfolder\\\").items() | select-object name, path"
         name_key_u = "NAME"
         return self.createObjectList(cmd, name_key_u)
 
@@ -265,7 +265,7 @@ class Application(Mode):
             self.warningNoCommandCandidates(o.get("NAME"))
         else:
             if self.confirm("Run", o.get("NAME"), o.get("PATH")):
-                Shell.ps("start-process \"shell:appsfolder\\" + o.get("PATH") + "\"")
+                Shell.ps("start-process \\\"shell:appsfolder\\\\" + o.get("PATH") + "\\\"")
 
 class Installed(Mode):
         
@@ -276,7 +276,7 @@ class Installed(Mode):
         self.object_func_list[Mode.OpIndex.REMOVE] = self.doRemove
 
     def prepareObjectList(self):
-        cmd = "get-item (\"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\", \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\", \"HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\") |% { $k = $_; $k.getvalue(\"UninstallString\") |% { if ($_ -ne $null) { $o = (1 | select -property KEY, NAME, VERSION, PUBLISHER, UNINSTALL); $o.key = $k.pspath; $o.name = $k.getvalue(\"DisplayName\"); $o.version = $k.getvalue(\"DisplayVersion\"); $o.publisher = $k.getvalue(\"Publisher\"); $o.uninstall = $_; $o }}}"
+        cmd = "get-item (\\\"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\\\", \\\"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\\\", \\\"HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\\\") |% { \$k = \$_; \$k.getvalue(\\\"UninstallString\\\") |% { if (\$_ -ne \$null) { \$o = (1 | select -property KEY, NAME, VERSION, PUBLISHER, UNINSTALL); \$o.key = \$k.pspath; \$o.name = \$k.getvalue(\\\"DisplayName\\\"); \$o.version = \$k.getvalue(\\\"DisplayVersion\\\"); \$o.publisher = \$k.getvalue(\\\"Publisher\\\"); \$o.uninstall = \$_; \$o }}}"
         name_key_u = "NAME"
         return self.createObjectList(cmd, name_key_u)
 
@@ -309,9 +309,9 @@ class Package(Mode):
         return self.createObjectList(cmd, name_key_u)
 
     def prepareProperties(self, o):
-        cmd = "get-appxpackage * | where-object packagefullname -eq \"" + o.get("PACKAGEFULLNAME") + "\""
-        cmd_pkg = "(get-appxpackage * | where-object packagefullname -eq \"" + o.get("PACKAGEFULLNAME") + "\" | get-appxpackagemanifest).package.properties"
-        cmd_ap = "(get-appxpackage * | where-object packagefullname -eq \"" + o.get("PACKAGEFULLNAME") + "\" | get-appxpackagemanifest).package.applications.application"
+        cmd = "get-appxpackage * | where-object packagefullname -eq \\\"" + o.get("PACKAGEFULLNAME") + "\\\""
+        cmd_pkg = "(get-appxpackage * | where-object packagefullname -eq \\\"" + o.get("PACKAGEFULLNAME") + "\\\" | get-appxpackagemanifest).package.properties"
+        cmd_ap = "(get-appxpackage * | where-object packagefullname -eq \\\"" + o.get("PACKAGEFULLNAME") + "\\\" | get-appxpackagemanifest).package.applications.application"
         props = o
         x = self.createPropertiesAlist(cmd, prefix="X_")
         pkg = self.createPropertiesAlist(cmd_pkg, prefix="PKG_")
@@ -335,14 +335,14 @@ class Package(Mode):
             self.warningNoCommandCandidates(p.get("NAME"))
         else:
             if self.confirm("Start", p.get("NAME"), p.get("X_PACKAGEFAMILYNAME")):
-                Shell.ps("start-process \"shell:appsfolder\\" + p.get("X_PACKAGEFAMILYNAME") + "!" + p.get("AP_ID") + "\"")
+                Shell.ps("start-process \\\"shell:appsfolder\\\\" + p.get("X_PACKAGEFAMILYNAME") + "!" + p.get("AP_ID") + "\\\"")
 
     def doRemove(self, o):
         if o.get("PACKAGEFULLNAME") is None:
             self.warningNoCommandCandidates(o.get("NAME"))
         else:
             if self.confirm("Uninstall", o.get("NAME"), o.get("PACKAGEFULLNAME"), no_by_default=True):
-                Shell.ps("remove-appxpackage \"" + o.get("PACKAGEFULLNAME") + "\"")
+                Shell.ps("remove-appxpackage \\\"" + o.get("PACKAGEFULLNAME") + "\\\"")
 
 class Service(Mode):
 
@@ -359,7 +359,7 @@ class Service(Mode):
         return self.createObjectList(cmd, name_key_u)
 
     def prepareProperties(self, o):
-        cmd = "get-wmiobject win32_service | where-object name -eq \"" + o.get("NAME") + "\" | select-object name, displayname, processid, startmode, state, pathname"
+        cmd = "get-wmiobject win32_service | where-object name -eq \\\"" + o.get("NAME") + "\\\" | select-object name, displayname, processid, startmode, state, pathname"
         props = o
         x = self.createPropertiesAlist(cmd, prefix="X_")
         if x is not None:
@@ -377,14 +377,14 @@ class Service(Mode):
             self.warningNoCommandCandidates(p.get("DISPLAYNAME"))
         else:
             if self.confirm("Start", p.get("DISPLAYNAME"), p.get("X_NAME")):
-                Shell.ps("(get-wmiobject win32_service | where-object name -eq \"" + p.get("X_NAME") + "\").startservice()")
+                Shell.ps("(get-wmiobject win32_service | where-object name -eq \\\"" + p.get("X_NAME") + "\\\").startservice()")
 
     def doStop(self, p):
         if p.get("X_NAME") is None:
             self.warningNoCommandCandidates(p.get("DISPLAYNAME"))
         else:
             if self.confirm("Stop", p.get("DISPLAYNAME"), p.get("X_NAME")):
-                Shell.ps("(get-wmiobject win32_service | where-object name -eq \"" + p.get("X_NAME") + "\").stopservice()")
+                Shell.ps("(get-wmiobject win32_service | where-object name -eq \\\"" + p.get("X_NAME") + "\\\").stopservice()")
 
 class Startup(Mode):
 
@@ -396,11 +396,11 @@ class Startup(Mode):
         self.property_func_list[Mode.OpIndex.REMOVE] = self.doRemove
 
     def prepareObjectList(self):
-        cmd_reg_1 = "$key = get-item \"HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\"; $key.getvaluenames() | % { $n = $_; $o = (1 | select-object -property id, name); $o.id = $key.pspath + \"\\\" + $n; $o.name = $n; $o }"
-        cmd_reg_2 = "$key = get-item \"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\"; $key.getvaluenames() | % { $n = $_; $o = (1 | select-object -property id, name); $o.id = $key.pspath + \"\\\" + $n; $o.name = $n; $o }"
-        cmd_reg_3 = "$key = get-item \"HKLM:\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Run\"; $key.getvaluenames() | % { $n = $_; $o = (1 | select-object -property id, name); $o.id = $key.pspath + \"\\\" + $n; $o.name = $n; $o }"
-        cmd_shell_1 = "(new-object -com shell.application).namespace(\"shell:startup\").items() | % { $o = (1 | select-object -property id, name); $o.id = \"Shell:Startup\\\" + $_.name; $o.name= $_.name; $o }"
-        cmd_shell_2 = "(new-object -com shell.application).namespace(\"shell:common startup\").items() | % { $o = (1 | select-object -property id, name); $o.id = \"Shell:Common Startup\\\" + $_.name; $o.name= $_.name; $o }"
+        cmd_reg_1 = "\$key = get-item \\\"HKCU:\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$key.getvaluenames() | % { \$n = \$_; \$o = (1 | select-object -property id, name); \$o.id = \$key.pspath + \\\"\\\\\\\" + \$n; \$o.name = \$n; \$o }"
+        cmd_reg_2 = "\$key = get-item \\\"HKLM:\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$key.getvaluenames() | % { \$n = \$_; \$o = (1 | select-object -property id, name); \$o.id = \$key.pspath + \\\"\\\\\\\" + \$n; \$o.name = \$n; \$o }"
+        cmd_reg_3 = "\$key = get-item \\\"HKLM:\\\\SOFTWARE\\\\Wow6432Node\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$key.getvaluenames() | % { \$n = \$_; \$o = (1 | select-object -property id, name); \$o.id = \$key.pspath + \\\"\\\\\\\" + \$n; \$o.name = \$n; \$o }"
+        cmd_shell_1 = "(new-object -com shell.application).namespace(\\\"shell:startup\\\").items() | % { \$o = (1 | select-object -property id, name); \$o.id = \\\"Shell:Startup\\\\\\\" + \$_.name; \$o.name= \$_.name; \$o }"
+        cmd_shell_2 = "(new-object -com shell.application).namespace(\\\"shell:common startup\\\").items() | % { \$o = (1 | select-object -property id, name); \$o.id = \\\"Shell:Common Startup\\\\\\\" + \$_.name; \$o.name= \$_.name; \$o }"
         name_key_u = "NAME"
 
         object_list_reg_1 = self.createObjectList(cmd_reg_1, name_key_u, category="REG")
@@ -413,10 +413,10 @@ class Startup(Mode):
 
     def prepareProperties(self, o):
         if o.get("CATEGORY") == "REG":
-            cmd = "$key = get-item \"" + o.get("ID").rsplit("\\", 1)[0] + "\"; $n = \"" + o.get("NAME") + "\"; $o = (1 | select-object -property name, value, type); $o.name = $n; $o.value = $key.getvalue($n); $o.type = $key.getvaluekind($n); $o"
+            cmd = "\$key = get-item \\\"" + o.get("ID").rsplit("\\", 1)[0] + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; \$o = (1 | select-object -property name, value, type); \$o.name = \$n; \$o.value = \$key.getvalue(\$n); \$o.type = \$key.getvaluekind(\$n); \$o"
         else:
             pn = o.get("ID").split("\\", 1)
-            cmd = "(new-object -com shell.application).namespace(\"" + pn[0] + "\").items() | where-object name -eq \"" + pn[1] + "\" | % { $o = (1 | select-object -property name, type, value, id); $o.name= $_.name; $o.type = $_.type; $o.value = $_.path; $o }"
+            cmd = "(new-object -com shell.application).namespace(\\\"" + pn[0] + "\\\").items() | where-object name -eq \\\"" + pn[1] + "\\\" | % { \$o = (1 | select-object -property name, type, value, id); \$o.name= \$_.name; \$o.type = \$_.type; \$o.value = \$_.path; \$o }"
         props = o
         x = self.createPropertiesAlist(cmd, prefix="X_")
         if x is not None:
@@ -440,13 +440,13 @@ class Startup(Mode):
         if p.get("CATEGORY") == "REG":
             kv = p.get("ID").rsplit("\\", 1)
             if self.confirm("Remove", p.get("NAME"), p.get("ID"), no_by_default=True):
-                Shell.ps("remove-itemproperty \"" + kv[0] + "\" -name \"" + kv[1] + "\"")
+                Shell.ps("remove-itemproperty \\\"" + kv[0] + "\\\" -name \\\"" + kv[1] + "\\\"")
         else:
             if p.get("X_VALUE") is None:
                 self.warningNoCommandCandidates(p.get("NAME"))
             else:
                 if self.confirm("Remove", p.get("NAME"), p.get("X_VALUE"), no_by_default=True):
-                    Shell.ps("remove-item \"" + p.get("X_VALUE") + "\"")
+                    Shell.ps("remove-item \\\"" + p.get("X_VALUE") + "\\\"")
 
 if __name__ == "__main__":
 

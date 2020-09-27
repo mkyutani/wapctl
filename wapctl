@@ -168,7 +168,7 @@ class Mode:
             return False
         if self.object_func_list[op_no] is None and self.property_func_list[op_no] is None:
             return False
-        object_list = self.prepareObjectList(op_no)
+        object_list = self.prepareObjectList()
         if self.object_func_list[op_no] is not None:
             for o in object_list:
                 self.object_func_list[op_no](o)
@@ -176,12 +176,12 @@ class Mode:
             if op_no != Mode.OpIndex.LIST and self.confirmAllTargets() == False:
                 return False
             if self.is_properties_batch is True:
-                props_list = self.preparePropertiesList(op_no, object_list)
+                props_list = self.preparePropertiesList(object_list)
                 for p in props_list:
                     self.property_func_list[op_no](p)
             else:
                 for o in object_list:
-                    props = self.prepareProperties(op_no, o)
+                    props = self.prepareProperties(o)
                     if props is not None:
                         self.property_func_list[op_no](props)
         return True
@@ -211,12 +211,12 @@ class Process(Mode):
         self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
         self.property_func_list[Mode.OpIndex.STOP] = self.doStop
 
-    def prepareObjectList(self, op_no):
+    def prepareObjectList(self):
         cmd = "get-process | select id, processname"
         name_key_u = "PROCESSNAME"
         return self.createObjectList(cmd, name_key_u)
 
-    def preparePropertiesList(self, op_no, olist):
+    def preparePropertiesList(self, olist):
         sep = ""
         idlist = ""
         for o in olist:
@@ -247,7 +247,7 @@ class Application(Mode):
         self.object_func_list[Mode.OpIndex.SHOW] = self.doShow
         self.object_func_list[Mode.OpIndex.START] = self.doStart
 
-    def prepareObjectList(self, op_no):
+    def prepareObjectList(self):
         cmd = "(new-object -com shell.application).namespace(\"shell:appsfolder\").items() | select-object name, path"
         name_key_u = "NAME"
         return self.createObjectList(cmd, name_key_u)
@@ -273,7 +273,7 @@ class Installed(Mode):
         self.object_func_list[Mode.OpIndex.SHOW] = self.doShow
         self.object_func_list[Mode.OpIndex.REMOVE] = self.doRemove
 
-    def prepareObjectList(self, op_no):
+    def prepareObjectList(self):
         cmd = "get-item (\"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\", \"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\", \"HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\") |% { $k = $_; $k.getvalue(\"UninstallString\") |% { if ($_ -ne $null) { $o = (1 | select -property KEY, NAME, VERSION, PUBLISHER, UNINSTALL); $o.key = $k.pspath; $o.name = $k.getvalue(\"DisplayName\"); $o.version = $k.getvalue(\"DisplayVersion\"); $o.publisher = $k.getvalue(\"Publisher\"); $o.uninstall = $_; $o }}}"
         name_key_u = "NAME"
         return self.createObjectList(cmd, name_key_u)
@@ -301,12 +301,12 @@ class Package(Mode):
         self.property_func_list[Mode.OpIndex.START] = self.doStart
         self.object_func_list[Mode.OpIndex.REMOVE] = self.doRemove
 
-    def prepareObjectList(self, op_no):
+    def prepareObjectList(self):
         cmd = "get-appxpackage *"
         name_key_u = "NAME"
         return self.createObjectList(cmd, name_key_u)
 
-    def prepareProperties(self, op_no, o):
+    def prepareProperties(self, o):
         cmd = "get-appxpackage * | where-object packagefullname -eq \"" + o.get("PACKAGEFULLNAME") + "\""
         cmd_pkg = "(get-appxpackage * | where-object packagefullname -eq \"" + o.get("PACKAGEFULLNAME") + "\" | get-appxpackagemanifest).package.properties"
         cmd_ap = "(get-appxpackage * | where-object packagefullname -eq \"" + o.get("PACKAGEFULLNAME") + "\" | get-appxpackagemanifest).package.applications.application"
@@ -351,12 +351,12 @@ class Service(Mode):
         self.property_func_list[Mode.OpIndex.START] = self.doStart
         self.property_func_list[Mode.OpIndex.STOP] = self.doStop
 
-    def prepareObjectList(self, op_no):
+    def prepareObjectList(self):
         cmd = "get-service | select-object name, displayname"
         name_key_u = "DISPLAYNAME"
         return self.createObjectList(cmd, name_key_u)
 
-    def prepareProperties(self, op_no, o):
+    def prepareProperties(self, o):
         cmd = "get-wmiobject win32_service | where-object name -eq \"" + o.get("NAME") + "\" | select-object name, displayname, processid, startmode, state, pathname"
         props = o
         x = self.createPropertiesAlist(cmd, prefix="X_")
@@ -393,7 +393,7 @@ class Startup(Mode):
         self.property_func_list[Mode.OpIndex.START] = self.doStart
         self.property_func_list[Mode.OpIndex.REMOVE] = self.doRemove
 
-    def prepareObjectList(self, op_no):
+    def prepareObjectList(self):
         cmd_reg_1 = "$key = get-item \"HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\"; $key.getvaluenames() | % { $n = $_; $o = (1 | select-object -property id, name); $o.id = $key.pspath + \"\\\" + $n; $o.name = $n; $o }"
         cmd_reg_2 = "$key = get-item \"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\"; $key.getvaluenames() | % { $n = $_; $o = (1 | select-object -property id, name); $o.id = $key.pspath + \"\\\" + $n; $o.name = $n; $o }"
         cmd_reg_3 = "$key = get-item \"HKLM:\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Run\"; $key.getvaluenames() | % { $n = $_; $o = (1 | select-object -property id, name); $o.id = $key.pspath + \"\\\" + $n; $o.name = $n; $o }"
@@ -409,7 +409,7 @@ class Startup(Mode):
         object_list = object_list_reg_1 + object_list_reg_2 + object_list_reg_3 + object_list_shell_1 + object_list_shell_2
         return sorted(object_list, key=lambda x:x["NAME"].upper())
 
-    def prepareProperties(self, op_no, o):
+    def prepareProperties(self, o):
         if o.get("CATEGORY") == "REG":
             cmd = "$key = get-item \"" + o.get("ID").rsplit("\\", 1)[0] + "\"; $n = \"" + o.get("NAME") + "\"; $o = (1 | select-object -property name, value, type); $o.name = $n; $o.value = $key.getvalue($n); $o.type = $key.getvaluekind($n); $o"
         else:

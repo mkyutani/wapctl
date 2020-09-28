@@ -348,6 +348,7 @@ class Service(Mode):
 
     def __init__(self):
         super().__init__()
+        self.is_properties_batch = True
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
         self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
         self.property_func_list[Mode.OpIndex.START] = self.doStart
@@ -358,33 +359,34 @@ class Service(Mode):
         name_key_u = "DISPLAYNAME"
         return self.createObjectList(cmd, name_key_u)
 
-    def prepareProperties(self, o):
-        cmd = "get-wmiobject win32_service | where-object name -eq \\\"" + o.get("NAME") + "\\\" | select-object name, displayname, processid, startmode, state, pathname"
-        props = o
-        x = self.createPropertiesAlist(cmd, prefix="X_")
-        if x is not None:
-            props.update(x)
-        return props
+    def preparePropertiesList(self, olist):
+        sep = ""
+        name_list = ""
+        for o in olist:
+            name_list = name_list + sep + "name=\'" + o.get("NAME") + "\'"
+            sep = " or "
+        cmd = "get-ciminstance -class win32_service -filter \\\"" + name_list + "\\\" | select-object name, displayname, processid, startmode, state, pathname"
+        return self.createPropertiesList(cmd)
 
     def doList(self, o):
         print(o.get("DISPLAYNAME"))
 
     def doShow(self, p):
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}".format(self.sep(), p.get("DISPLAYNAME"), p.get("X_NAME") or "", p.get("X_STARTMODE") or "", p.get("X_STATE") or "", p.get("X_PROCESSID") or "", p.get("X_PATHNAME") or ""))
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}".format(self.sep(), p.get("DISPLAYNAME"), p.get("NAME") or "", p.get("STARTMODE") or "", p.get("STATE") or "", p.get("PROCESSID") or "", p.get("PATHNAME") or ""))
 
     def doStart(self, p):
-        if p.get("X_NAME") is None:
+        if p.get("NAME") is None:
             self.warningNoCommandCandidates(p.get("DISPLAYNAME"))
         else:
-            if self.confirm("Start", p.get("DISPLAYNAME"), p.get("X_NAME")):
-                Shell.ps("(get-wmiobject win32_service | where-object name -eq \\\"" + p.get("X_NAME") + "\\\").startservice()")
+            if self.confirm("Start", p.get("DISPLAYNAME"), p.get("NAME")):
+                Shell.ps("(get-wmiobject win32_service | where-object name -eq \"" + p.get("NAME") + "\").startservice()")
 
     def doStop(self, p):
-        if p.get("X_NAME") is None:
+        if p.get("NAME") is None:
             self.warningNoCommandCandidates(p.get("DISPLAYNAME"))
         else:
-            if self.confirm("Stop", p.get("DISPLAYNAME"), p.get("X_NAME")):
-                Shell.ps("(get-wmiobject win32_service | where-object name -eq \\\"" + p.get("X_NAME") + "\\\").stopservice()")
+            if self.confirm("Stop", p.get("DISPLAYNAME"), p.get("NAME")):
+                Shell.ps("(get-wmiobject win32_service | where-object name -eq \"" + p.get("NAME") + "\").stopservice()")
 
 class Startup(Mode):
 

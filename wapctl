@@ -168,14 +168,14 @@ class Mode:
             return False
         if self.object_func_list[op_no] is None and self.property_func_list[op_no] is None:
             return False
+        if op_no != Mode.OpIndex.LIST and self.confirmAllTargets() == False:
+            return False
         object_list = self.prepareObjectList()
         if len(object_list) > 0:
             if self.object_func_list[op_no] is not None:
                 for o in object_list:
                     self.object_func_list[op_no](o)
             if self.property_func_list[op_no] is not None:
-                if op_no != Mode.OpIndex.LIST and self.confirmAllTargets() == False:
-                    return False
                 if self.is_properties_batch is True:
                     props_list = self.preparePropertiesList(object_list)
                     if len(props_list) > 0:

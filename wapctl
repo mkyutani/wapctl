@@ -136,11 +136,12 @@ class Mode:
         cls.separator = sep
         cls.flag_yes = flag_yes
         return cls.mode_list
-
+    
     def __init__(self):
         self.object_func_list = [None] * Mode.OpIndex.MAX
         self.property_func_list = [None] * Mode.OpIndex.MAX
         self.is_properties_batch = False
+        self.name_key_u = None
 
     def sep(self):
         return self.separator
@@ -188,17 +189,17 @@ class Mode:
                             self.property_func_list[op_no](props)
         return True
 
-    def createObjectList(self, cmd, name_key_u, category=None):
+    def createObjectList(self, cmd, category=None):
         ps = PSArray()
-        return ps.build(cmd, name_key=name_key_u, name_target=self.target_u, category_key="CATEGORY", category=category)
+        return ps.build(cmd, name_key=self.name_key_u, name_target=self.target_u, category_key="CATEGORY", category=category)
 
     def createPropertiesList(self, cmd, prefix=""):
         ps = PSArray()
-        return ps.build(cmd, prefix=prefix)
+        return ps.build(cmd, name_key=self.name_key_u, prefix=prefix)
 
     def createPropertiesAlist(self, cmd, prefix=""):
         ps = PSArray()
-        list = ps.build(cmd, prefix=prefix)
+        list = ps.build(cmd, name_key=self.name_key_u, prefix=prefix)
         if len(list) > 0:
             return list[0]
         else:
@@ -212,11 +213,11 @@ class Process(Mode):
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
         self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
         self.property_func_list[Mode.OpIndex.STOP] = self.doStop
+        self.name_key_u = "PROCESSNAME"
 
     def prepareObjectList(self):
         cmd = "get-process | select id, processname"
-        name_key_u = "PROCESSNAME"
-        return self.createObjectList(cmd, name_key_u)
+        return self.createObjectList(cmd)
 
     def preparePropertiesList(self, olist):
         sep = ""
@@ -248,11 +249,11 @@ class Application(Mode):
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
         self.object_func_list[Mode.OpIndex.SHOW] = self.doShow
         self.object_func_list[Mode.OpIndex.START] = self.doStart
+        self.name_key_u = "NAME"
 
     def prepareObjectList(self):
         cmd = "(new-object -com shell.application).namespace(\\\"shell:appsfolder\\\").items() | select-object name, path"
-        name_key_u = "NAME"
-        return self.createObjectList(cmd, name_key_u)
+        return self.createObjectList(cmd)
 
     def doList(self, o):
         print(o.get("NAME"))
@@ -274,11 +275,11 @@ class Installed(Mode):
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
         self.object_func_list[Mode.OpIndex.SHOW] = self.doShow
         self.object_func_list[Mode.OpIndex.REMOVE] = self.doRemove
+        self.name_key_u = "NAME"
 
     def prepareObjectList(self):
         cmd = "get-item (\\\"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\\\", \\\"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\\\", \\\"HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\\\") |% { \$k = \$_; \$k.getvalue(\\\"UninstallString\\\") |% { if (\$_ -ne \$null) { \$o = (1 | select -property KEY, NAME, VERSION, PUBLISHER, UNINSTALL); \$o.key = \$k.pspath; \$o.name = \$k.getvalue(\\\"DisplayName\\\"); \$o.version = \$k.getvalue(\\\"DisplayVersion\\\"); \$o.publisher = \$k.getvalue(\\\"Publisher\\\"); \$o.uninstall = \$_; \$o }}}"
-        name_key_u = "NAME"
-        return self.createObjectList(cmd, name_key_u)
+        return self.createObjectList(cmd)
 
     def doList(self, o):
         if len(o.get("NAME")) > 0:
@@ -302,40 +303,28 @@ class Package(Mode):
         self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
         self.property_func_list[Mode.OpIndex.START] = self.doStart
         self.object_func_list[Mode.OpIndex.REMOVE] = self.doRemove
+        self.name_key_u = "NAME"
 
     def prepareObjectList(self):
         cmd = "get-appxpackage *"
-        name_key_u = "NAME"
-        return self.createObjectList(cmd, name_key_u)
+        return self.createObjectList(cmd)
 
     def prepareProperties(self, o):
-        cmd = "get-appxpackage * | where-object packagefullname -eq \\\"" + o.get("PACKAGEFULLNAME") + "\\\""
-        cmd_pkg = "(get-appxpackage * | where-object packagefullname -eq \\\"" + o.get("PACKAGEFULLNAME") + "\\\" | get-appxpackagemanifest).package.properties"
-        cmd_ap = "(get-appxpackage * | where-object packagefullname -eq \\\"" + o.get("PACKAGEFULLNAME") + "\\\" | get-appxpackagemanifest).package.applications.application"
-        props = o
-        x = self.createPropertiesAlist(cmd, prefix="X_")
-        pkg = self.createPropertiesAlist(cmd_pkg, prefix="PKG_")
-        ap = self.createPropertiesAlist(cmd_ap, prefix="AP_")
-        if x is not None:
-            props.update(x)
-        if pkg is not None:
-            props.update(pkg)
-        if ap is not None:
-            props.update(ap)
-        return props
+        cmd = "\$x = (get-appxpackage * | where packagefullname -eq \\\"" + o.get("PACKAGEFULLNAME") + "\\\"); \$q = (\$x | get-appxpackagemanifest).package; \$p = \$q.properties; \$a = \$q.applications.application; \$o = (1 | select -property name, packagefullname, packagefamilyname, publisherdisplayname, apid, executable); \$o.name = \$x.name; \$o.packagefullname = \$x.packagefullname; \$o.packagefamilyname = \$x.packagefamilyname; \$o.publisherdisplayname = \$p.publisherdisplayname; \$o.apid = \$a.id; \$o.executable = \$a.executable; \$o"
+        return self.createPropertiesAlist(cmd)
 
     def doList(self, o):
         print(o.get("NAME"))
 
     def doShow(self, p):
-        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), p.get("NAME"), p.get("PACKAGEFULLNAME"), p.get("PKG_PUBLISHERDISPLAYNAME") or "", p.get("AP_EXECUTABLE") or ""))
+        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), p.get("NAME"), p.get("PACKAGEFULLNAME"), p.get("PUBLISHERDISPLAYNAME") or "", p.get("EXECUTABLE") or ""))
 
     def doStart(self, p):
-        if p.get("X_PACKAGEFAMILYNAME") is None:
+        if p.get("PACKAGEFAMILYNAME") is None:
             self.warningNoCommandCandidates(p.get("NAME"))
         else:
-            if self.confirm("Start", p.get("NAME"), p.get("X_PACKAGEFAMILYNAME")):
-                Shell.ps("start-process \\\"shell:appsfolder\\\\" + p.get("X_PACKAGEFAMILYNAME") + "!" + p.get("AP_ID") + "\\\"")
+            if self.confirm("Start", p.get("NAME"), p.get("PACKAGEFAMILYNAME")):
+                Shell.ps("start-process \\\"shell:appsfolder\\\\" + p.get("PACKAGEFAMILYNAME") + "!" + p.get("APID") + "\\\"")
 
     def doRemove(self, o):
         if o.get("PACKAGEFULLNAME") is None:
@@ -353,11 +342,11 @@ class Service(Mode):
         self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
         self.property_func_list[Mode.OpIndex.START] = self.doStart
         self.property_func_list[Mode.OpIndex.STOP] = self.doStop
+        self.name_key_u = "DISPLAYNAME"
 
     def prepareObjectList(self):
         cmd = "get-service | select-object name, displayname"
-        name_key_u = "DISPLAYNAME"
-        return self.createObjectList(cmd, name_key_u)
+        return self.createObjectList(cmd)
 
     def preparePropertiesList(self, olist):
         sep = ""
@@ -396,6 +385,7 @@ class Startup(Mode):
         self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
         self.property_func_list[Mode.OpIndex.START] = self.doStart
         self.property_func_list[Mode.OpIndex.REMOVE] = self.doRemove
+        self.name_key_u = "NAME"
 
     def prepareObjectList(self):
         cmd_reg_1 = "\$key = get-item \\\"HKCU:\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$key.getvaluenames() | % { \$n = \$_; \$o = (1 | select-object -property id, name); \$o.id = \$key.pspath + \\\"\\\\\\\" + \$n; \$o.name = \$n; \$o }"
@@ -403,40 +393,35 @@ class Startup(Mode):
         cmd_reg_3 = "\$key = get-item \\\"HKLM:\\\\SOFTWARE\\\\Wow6432Node\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$key.getvaluenames() | % { \$n = \$_; \$o = (1 | select-object -property id, name); \$o.id = \$key.pspath + \\\"\\\\\\\" + \$n; \$o.name = \$n; \$o }"
         cmd_shell_1 = "(new-object -com shell.application).namespace(\\\"shell:startup\\\").items() | % { \$o = (1 | select-object -property id, name); \$o.id = \\\"Shell:Startup\\\\\\\" + \$_.name; \$o.name= \$_.name; \$o }"
         cmd_shell_2 = "(new-object -com shell.application).namespace(\\\"shell:common startup\\\").items() | % { \$o = (1 | select-object -property id, name); \$o.id = \\\"Shell:Common Startup\\\\\\\" + \$_.name; \$o.name= \$_.name; \$o }"
-        name_key_u = "NAME"
 
-        object_list_reg_1 = self.createObjectList(cmd_reg_1, name_key_u, category="REG")
-        object_list_reg_2 = self.createObjectList(cmd_reg_2, name_key_u, category="REG")
-        object_list_reg_3 = self.createObjectList(cmd_reg_3, name_key_u, category="REG")
-        object_list_shell_1 = self.createObjectList(cmd_shell_1, name_key_u, category="SHELL")
-        object_list_shell_2 = self.createObjectList(cmd_shell_2, name_key_u, category="SHELL")
+        object_list_reg_1 = self.createObjectList(cmd_reg_1, category="REG")
+        object_list_reg_2 = self.createObjectList(cmd_reg_2, category="REG")
+        object_list_reg_3 = self.createObjectList(cmd_reg_3, category="REG")
+        object_list_shell_1 = self.createObjectList(cmd_shell_1, category="SHELL")
+        object_list_shell_2 = self.createObjectList(cmd_shell_2, category="SHELL")
         object_list = object_list_reg_1 + object_list_reg_2 + object_list_reg_3 + object_list_shell_1 + object_list_shell_2
         return sorted(object_list, key=lambda x:x["NAME"].upper())
 
     def prepareProperties(self, o):
         if o.get("CATEGORY") == "REG":
-            cmd = "\$key = get-item \\\"" + o.get("ID").rsplit("\\", 1)[0] + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; \$o = (1 | select-object -property name, value, type); \$o.name = \$n; \$o.value = \$key.getvalue(\$n); \$o.type = \$key.getvaluekind(\$n); \$o"
+            cmd = "\$key = get-item \\\"" + o.get("ID").rsplit("\\", 1)[0] + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; \$o = (1 | select-object -property id, name, value, type); \$o.name = \$n; \$o.id = \\\"" + o.get("ID") + "\\\"; \$o.value = \$key.getvalue(\$n); \$o.type = \$key.getvaluekind(\$n); \$o"
         else:
             pn = o.get("ID").split("\\", 1)
-            cmd = "(new-object -com shell.application).namespace(\\\"" + pn[0] + "\\\").items() | where-object name -eq \\\"" + pn[1] + "\\\" | % { \$o = (1 | select-object -property name, type, value, id); \$o.name= \$_.name; \$o.type = \$_.type; \$o.value = \$_.path; \$o }"
-        props = o
-        x = self.createPropertiesAlist(cmd, prefix="X_")
-        if x is not None:
-            props.update(x)
-        return props
+            cmd = "(new-object -com shell.application).namespace(\\\"" + pn[0] + "\\\").items() | where-object name -eq \\\"" + pn[1] + "\\\" | % { \$o = (1 | select-object -property id, name, value, type); \$o.id = \\\"" + o.get("ID") + "\\\"; \$o.name= \$_.name; \$o.value = \$_.path; \$o.type = \$_.type; \$o }"
+        return self.createPropertiesAlist(cmd)
 
     def doList(self, o):
         print(o.get("NAME"))
 
     def doShow(self, p):
-        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), p.get("NAME"), p.get("X_VALUE") or "", p.get("X_TYPE") or "", p.get("ID").rsplit("\\", 1)[0]))
+        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), p.get("NAME"), p.get("VALUE") or "", p.get("TYPE") or "", p.get("ID").rsplit("\\", 1)[0]))
 
     def doStart(self, p):
-        if p.get("X_VALUE") is None:
+        if p.get("VALUE") is None:
             self.warningNoCommandCandidates(p.get("NAME"))
         else:
-            if self.confirm("Start", p.get("NAME"), p.get("X_VALUE")):
-                Shell.traditional(p.get("X_VALUE"));
+            if self.confirm("Start", p.get("NAME"), p.get("VALUE")):
+                Shell.traditional(p.get("VALUE"));
 
     def doRemove(self, p):
         if p.get("CATEGORY") == "REG":
@@ -444,11 +429,11 @@ class Startup(Mode):
             if self.confirm("Remove", p.get("NAME"), p.get("ID"), no_by_default=True):
                 Shell.ps("remove-itemproperty \\\"" + kv[0] + "\\\" -name \\\"" + kv[1] + "\\\"")
         else:
-            if p.get("X_VALUE") is None:
+            if p.get("VALUE") is None:
                 self.warningNoCommandCandidates(p.get("NAME"))
             else:
-                if self.confirm("Remove", p.get("NAME"), p.get("X_VALUE"), no_by_default=True):
-                    Shell.ps("remove-item \\\"" + p.get("X_VALUE") + "\\\"")
+                if self.confirm("Remove", p.get("NAME"), p.get("VALUE"), no_by_default=True):
+                    Shell.ps("remove-item \\\"" + p.get("VALUE") + "\\\"")
 
 if __name__ == "__main__":
 

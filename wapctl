@@ -382,33 +382,17 @@ class Startup(Mode):
     def __init__(self):
         super().__init__()
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
-        self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
-        self.property_func_list[Mode.OpIndex.START] = self.doStart
-        self.property_func_list[Mode.OpIndex.REMOVE] = self.doRemove
+        self.object_func_list[Mode.OpIndex.SHOW] = self.doShow
+        self.object_func_list[Mode.OpIndex.START] = self.doStart
+        self.object_func_list[Mode.OpIndex.REMOVE] = self.doRemove
         self.name_key_u = "NAME"
 
     def prepareObjectList(self):
-        cmd_reg_1 = "\$key = get-item \\\"HKCU:\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$key.getvaluenames() | % { \$n = \$_; \$o = (1 | select-object -property id, name); \$o.id = \$key.pspath + \\\"\\\\\\\" + \$n; \$o.name = \$n; \$o }"
-        cmd_reg_2 = "\$key = get-item \\\"HKLM:\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$key.getvaluenames() | % { \$n = \$_; \$o = (1 | select-object -property id, name); \$o.id = \$key.pspath + \\\"\\\\\\\" + \$n; \$o.name = \$n; \$o }"
-        cmd_reg_3 = "\$key = get-item \\\"HKLM:\\\\SOFTWARE\\\\Wow6432Node\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$key.getvaluenames() | % { \$n = \$_; \$o = (1 | select-object -property id, name); \$o.id = \$key.pspath + \\\"\\\\\\\" + \$n; \$o.name = \$n; \$o }"
-        cmd_shell_1 = "(new-object -com shell.application).namespace(\\\"shell:startup\\\").items() | % { \$o = (1 | select-object -property id, name); \$o.id = \\\"Shell:Startup\\\\\\\" + \$_.name; \$o.name= \$_.name; \$o }"
-        cmd_shell_2 = "(new-object -com shell.application).namespace(\\\"shell:common startup\\\").items() | % { \$o = (1 | select-object -property id, name); \$o.id = \\\"Shell:Common Startup\\\\\\\" + \$_.name; \$o.name= \$_.name; \$o }"
-
-        object_list_reg_1 = self.createObjectList(cmd_reg_1, category="REG")
-        object_list_reg_2 = self.createObjectList(cmd_reg_2, category="REG")
-        object_list_reg_3 = self.createObjectList(cmd_reg_3, category="REG")
-        object_list_shell_1 = self.createObjectList(cmd_shell_1, category="SHELL")
-        object_list_shell_2 = self.createObjectList(cmd_shell_2, category="SHELL")
-        object_list = object_list_reg_1 + object_list_reg_2 + object_list_reg_3 + object_list_shell_1 + object_list_shell_2
+        cmd_reg = "\$k1 = get-item \\\"HKCU:\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$r1 = (\$k1.getvaluenames() |%{ \$n = \$_; \$o = (1 | select -property id, name, type, value); \$o.id = \$k1.pspath + \\\"\\\\\\\" + \$n; \$o.name = \$n; \$o.type = \$k1.getvaluekind(\$n); \$o.value = \$k1.getvalue(\$n); \$o }); \$k2 = get-item \\\"HKLM:\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$r2 = (\$k2.getvaluenames() |%{ \$n = \$_; \$o = (1 | select -property id, name, type, value); \$o.id = \$k2.pspath + \\\"\\\\\\\" + \$n; \$o.name = \$n; \$o.type = \$k2.getvaluekind(\$n); \$o.value = \$k2.getvalue(\$n); \$o }); \$k3 = get-item \\\"HKLM:\\\\SOFTWARE\\\\Wow6432Node\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$r3 = (\$k3.getvaluenames() |%{ \$n = \$_; \$o = (1 | select -property id, name, type, value); \$o.id = \$k3.pspath + \\\"\\\\\\\" + \$n; \$o.name = \$n; \$o.type = \$k3.getvaluekind(\$n); \$o.value = \$k3.getvalue(\$n); \$o })"
+        cmd_shell = "\$r4 = ((new-object -com shell.application).namespace(\\\"shell:Startup\\\").items() |%{ \$o = (1 | select -property id, name, type, value); \$o.id = \\\"Shell:Startup\\\\\\\" + \$_.name; \$o.name = \$_.name; \$o.type = \$_.type; \$o.value = \$_.path; \$o }); \$r5 = ((new-object -com shell.application).namespace(\\\"shell:Common Startup\\\").items() |%{ \$o = (1 | select -property id, name, type, value); \$o.id = \\\"Shell:Common Startup\\\\\\\" + \$_.name; \$o.name= \$_.name; \$o.type = \$_.type; \$o.value = \$_.path; \$o })"
+        cmd = "{};{};{}".format(cmd_reg, cmd_shell, "\$r1, \$r2, \$r3, \$r4, \$r5")
+        object_list = self.createObjectList(cmd)
         return sorted(object_list, key=lambda x:x["NAME"].upper())
-
-    def prepareProperties(self, o):
-        if o.get("CATEGORY") == "REG":
-            cmd = "\$key = get-item \\\"" + o.get("ID").rsplit("\\", 1)[0] + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; \$o = (1 | select-object -property id, name, value, type); \$o.name = \$n; \$o.id = \\\"" + o.get("ID") + "\\\"; \$o.value = \$key.getvalue(\$n); \$o.type = \$key.getvaluekind(\$n); \$o"
-        else:
-            pn = o.get("ID").split("\\", 1)
-            cmd = "(new-object -com shell.application).namespace(\\\"" + pn[0] + "\\\").items() | where-object name -eq \\\"" + pn[1] + "\\\" | % { \$o = (1 | select-object -property id, name, value, type); \$o.id = \\\"" + o.get("ID") + "\\\"; \$o.name= \$_.name; \$o.value = \$_.path; \$o.type = \$_.type; \$o }"
-        return self.createPropertiesAlist(cmd)
 
     def doList(self, o):
         print(o.get("NAME"))
@@ -424,16 +408,16 @@ class Startup(Mode):
                 Shell.traditional(p.get("VALUE"));
 
     def doRemove(self, p):
-        if p.get("CATEGORY") == "REG":
-            kv = p.get("ID").rsplit("\\", 1)
-            if self.confirm("Remove", p.get("NAME"), p.get("ID"), no_by_default=True):
-                Shell.ps("remove-itemproperty \\\"" + kv[0] + "\\\" -name \\\"" + kv[1] + "\\\"")
-        else:
+        if (p.get("ID"))[0:6].upper() == "SHELL:":
             if p.get("VALUE") is None:
                 self.warningNoCommandCandidates(p.get("NAME"))
             else:
                 if self.confirm("Remove", p.get("NAME"), p.get("VALUE"), no_by_default=True):
                     Shell.ps("remove-item \\\"" + p.get("VALUE") + "\\\"")
+        else:
+            kv = p.get("ID").rsplit("\\", 1)
+            if self.confirm("Remove", p.get("NAME"), p.get("ID"), no_by_default=True):
+                Shell.ps("remove-itemproperty \\\"" + kv[0] + "\\\" -name \\\"" + kv[1] + "\\\"")
 
 if __name__ == "__main__":
 

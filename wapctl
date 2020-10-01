@@ -44,7 +44,7 @@ class PSArray:
         self.nextline = line
         return retval
 
-    def build(self, cmd, name_key=None, name_target=None, category_key=None, category=None, prefix=""):
+    def build(self, cmd, name_key=None, name_target=None):
         self.stream = None
         self.nextline = None
 
@@ -70,11 +70,9 @@ class PSArray:
                 name = name.strip()
                 name_u = name.upper()
                 value = value.strip()
-                item_alist.update({prefix + name_u: value})
+                item_alist.update({name_u: value})
             else:
                 if len(item_alist) > 0:
-                    if category_key is not None and category is not None:
-                        item_alist.update({category_key: category})
                     if name_key_u is None or name_target_u is None:
                         all_list.append(item_alist)
                     else:
@@ -84,8 +82,6 @@ class PSArray:
             line = self.readline()
 
         if len(item_alist) > 0:
-            if category_key is not None and category is not None:
-                item_alist.update({category_key: category})
             if name_key_u is None or name_target_u is None:
                 all_list.append(item_alist)
             else:
@@ -189,17 +185,17 @@ class Mode:
                             self.property_func_list[op_no](props)
         return True
 
-    def createObjectList(self, cmd, category=None):
+    def createObjectList(self, cmd):
         ps = PSArray()
-        return ps.build(cmd, name_key=self.name_key_u, name_target=self.target_u, category_key="CATEGORY", category=category)
+        return ps.build(cmd, name_key=self.name_key_u, name_target=self.target_u)
 
-    def createPropertiesList(self, cmd, prefix=""):
+    def createPropertiesList(self, cmd):
         ps = PSArray()
-        return ps.build(cmd, name_key=self.name_key_u, prefix=prefix)
+        return ps.build(cmd, name_key=self.name_key_u)
 
-    def createPropertiesAlist(self, cmd, prefix=""):
+    def createPropertiesAlist(self, cmd):
         ps = PSArray()
-        list = ps.build(cmd, name_key=self.name_key_u, prefix=prefix)
+        list = ps.build(cmd, name_key=self.name_key_u)
         if len(list) > 0:
             return list[0]
         else:

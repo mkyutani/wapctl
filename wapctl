@@ -295,6 +295,7 @@ class Package(Mode):
 
     def __init__(self):
         super().__init__()
+        self.is_properties_batch = True
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
         self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
         self.property_func_list[Mode.OpIndex.START] = self.doStart
@@ -305,9 +306,14 @@ class Package(Mode):
         cmd = "get-appxpackage *"
         return self.createObjectList(cmd)
 
-    def prepareProperties(self, o):
-        cmd = "\$x = (get-appxpackage * | where packagefullname -eq \\\"" + o.get("PACKAGEFULLNAME") + "\\\"); \$q = (\$x | get-appxpackagemanifest).package; \$p = \$q.properties; \$a = \$q.applications.application; \$o = (1 | select -property name, packagefullname, packagefamilyname, publisherdisplayname, apid, executable); \$o.name = \$x.name; \$o.packagefullname = \$x.packagefullname; \$o.packagefamilyname = \$x.packagefamilyname; \$o.publisherdisplayname = \$p.publisherdisplayname; \$o.apid = \$a.id; \$o.executable = \$a.executable; \$o"
-        return self.createPropertiesAlist(cmd)
+    def preparePropertiesList(self, olist):
+        sep = ""
+        name_list = ""
+        for o in olist:
+            name_list = name_list + sep + "\\\"" + o.get("NAME") + "\\\""
+            sep = ","
+        cmd = "(" + name_list + ") |%{ get-appxpackage -name \$_ |%{ \$x = \$_; \$q = (get-appxpackagemanifest -package \$x).package; \$p = \$q.properties; \$a = \$q.applications.application; [pscustomobject]@{ name = \$x.name; packagefullname = \$x.packagefullname; packagefamilyname = \$x.packagefamilyname; publisherdisplayname = \$p.publisherdisplayname; apid = \$a.id; executable = \$a.executable } }}"
+        return self.createPropertiesList(cmd)
 
     def doList(self, o):
         print(o.get("NAME"))

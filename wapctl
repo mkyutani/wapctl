@@ -366,38 +366,62 @@ class Startup(Mode):
     def __init__(self):
         super().__init__()
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
-        self.object_func_list[Mode.OpIndex.SHOW] = self.doShow
-        self.object_func_list[Mode.OpIndex.START] = self.doStart
+        self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
+        self.property_func_list[Mode.OpIndex.START] = self.doStart
+        self.property_func_list[Mode.OpIndex.STOP] = self.doStop
         self.object_func_list[Mode.OpIndex.REMOVE] = self.doRemove
         self.name_key_u = "NAME"
 
     def prepareObjectList(self):
-        cmd_reg = "\$k1 = get-item \\\"HKCU:\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$r1 = (\$k1.getvaluenames() |%{ \$n = \$_; [pscustomobject]@{ id = \$k1.pspath + \\\"\\\\\\\" + \$n; name = \$n; type = \$k1.getvaluekind(\$n); value = \$k1.getvalue(\$n) }}); \$k2 = get-item \\\"HKLM:\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$r2 = (\$k2.getvaluenames() |%{ \$n = \$_; [pscustomobject]@{ id = \$k2.pspath + \\\"\\\\\\\" + \$n; name = \$n; type = \$k2.getvaluekind(\$n); value = \$k2.getvalue(\$n) }}); \$k3 = get-item \\\"HKLM:\\\\SOFTWARE\\\\Wow6432Node\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$r3 = (\$k3.getvaluenames() |%{ \$n = \$_; [pscustomobject]@{ id = \$k3.pspath + \\\"\\\\\\\" + \$n; name = \$n; type = \$k3.getvaluekind(\$n); value = \$k3.getvalue(\$n) }})"
-        cmd_shell = "\$r4 = ((new-object -com shell.application).namespace(\\\"shell:Startup\\\").items() |%{ [pscustomobject]@{ id = \\\"Shell:Startup\\\\\\\" + \$_.name; name = \$_.name; type = \$_.type; value = \$_.path }}); \$r5 = ((new-object -com shell.application).namespace(\\\"shell:Common Startup\\\").items() |%{ [pscustomobject]@{ id = \\\"Shell:Common Startup\\\\\\\" + \$_.name; name= \$_.name; type = \$_.type; value = \$_.path }})"
+        cmd_reg = "\$k1 = get-item \\\"HKCU:\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$r1 = (\$k1.getvaluenames() |%{ \$n = \$_; [pscustomobject]@{ id = \$k1.pspath + \\\"\\\\\\\" + \$n; name = \$n; type = \$k1.getvaluekind(\$n); command = \$k1.getvalue(\$n) }}); \$k2 = get-item \\\"HKLM:\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$r2 = (\$k2.getvaluenames() |%{ \$n = \$_; [pscustomobject]@{ id = \$k2.pspath + \\\"\\\\\\\" + \$n; name = \$n; type = \$k2.getvaluekind(\$n); command = \$k2.getvalue(\$n) }}); \$k3 = get-item \\\"HKLM:\\\\SOFTWARE\\\\Wow6432Node\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$r3 = (\$k3.getvaluenames() |%{ \$n = \$_; [pscustomobject]@{ id = \$k3.pspath + \\\"\\\\\\\" + \$n; name = \$n; type = \$k3.getvaluekind(\$n); command = \$k3.getvalue(\$n) }})"
+        cmd_shell = "\$r4 = ((new-object -com shell.application).namespace(\\\"shell:Startup\\\").items() |%{ [pscustomobject]@{ id = \\\"Shell:Startup\\\\\\\" + \$_.name; name = \$_.name; type = \$_.type; command = \$_.path }}); \$r5 = ((new-object -com shell.application).namespace(\\\"shell:Common Startup\\\").items() |%{ [pscustomobject]@{ id = \\\"Shell:Common Startup\\\\\\\" + \$_.name; name= \$_.name; type = \$_.type; command = \$_.path }})"
         cmd = "{};{};{}".format(cmd_reg, cmd_shell, "\$r1, \$r2, \$r3, \$r4, \$r5")
         object_list = self.createObjectList(cmd)
         return sorted(object_list, key=lambda x:x["NAME"].upper())
+
+    def preparePropertiesList(self, olist):
+        sep = ""
+        name_list = ""
+        for o in olist:
+            name_list = name_list + sep + "\\\"" + o.get("NAME") + "\\\""
+            sep = ","
+        cmd = "\$a = foreach (\$n in " + name_list + ") { \$x = get-itemproperty \\\"HKLM:\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Explorer\\\\StartupApproved\\\\*\\\", \\\"HKCU:\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Explorer\\\\StartupApproved\\\\*\\\"; \$x |%{ \$p = \$_.PSPath; \$_ | get-member -type noteproperty |? name -eq \$n |%{ \$v = get-itempropertyvalue \$p -name \$n; [pscustomobject]@{ path = \$p; name = \$n; disabled = \$v[0] -band 1 }}}}; \$a"
+        return self.createPropertiesList(cmd)
+
+    def state(self, p):
+        f = p.get("DISABLED")
+        if f is None:
+            return None 
+        return "disabled" if (f == "1") else "enabled"
 
     def doList(self, o):
         print(o.get("NAME"))
 
     def doShow(self, p):
-        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), p.get("NAME"), p.get("VALUE") or "", p.get("TYPE") or "", p.get("ID").rsplit("\\", 1)[0]))
+        loc, typ = p.get("PATH").rsplit("\\", 1)
+        print("{1}{0}{2}{0}{3}".format(self.sep(), p.get("NAME") or "", typ, self.state(p) or ""))
 
     def doStart(self, p):
-        if p.get("VALUE") is None:
+        if p.get("NAME") is None:
             self.warningNoCommandCandidates(p.get("NAME"))
         else:
-            if self.confirm("Start", p.get("NAME"), p.get("VALUE")):
-                Shell.traditional(p.get("VALUE"));
+            if self.confirm("Enable", p.get("NAME"), self.state(p)):
+                Shell.ps("\$k = \\\"" + p.get("PATH") + "\\\"; \$n = \\\"" + p.get("NAME") + "\\\"; \$v = get-itempropertyvalue \$k -name \$n; \$v[0] = \$v[0] -band 0xfe; set-itemproperty \$k -name \$n -value \$v")
+
+    def doStop(self, p):
+        if p.get("NAME") is None:
+            self.warningNoCommandCandidates(p.get("NAME"))
+        else:
+            if self.confirm("Disable", p.get("NAME"), self.state(p)):
+                Shell.ps("\$k = \\\"" + p.get("PATH") + "\\\"; \$n = \\\"" + p.get("NAME") + "\\\"; \$v = get-itempropertyvalue \$k -name \$n; \$v[0] = \$v[0] -bor 1; set-itemproperty \$k -name \$n -value \$v")
 
     def doRemove(self, p):
         if (p.get("ID"))[0:6].upper() == "SHELL:":
             if p.get("VALUE") is None:
                 self.warningNoCommandCandidates(p.get("NAME"))
             else:
-                if self.confirm("Remove", p.get("NAME"), p.get("VALUE"), no_by_default=True):
-                    Shell.ps("remove-item \\\"" + p.get("VALUE") + "\\\"")
+                if self.confirm("Remove", p.get("NAME"), p.get("COMMAND"), no_by_default=True):
+                    Shell.ps("remove-item \\\"" + p.get("COMMAND") + "\\\"")
         else:
             kv = p.get("ID").rsplit("\\", 1)
             if self.confirm("Remove", p.get("NAME"), p.get("ID"), no_by_default=True):
@@ -412,7 +436,7 @@ if __name__ == "__main__":
   {0} ins|installed [list|show|remove [<name>]]
   {0} pkg|package [list|show|start|remove [<name>]]
   {0} svc|service [list|show|start|stop [<name>]]
-  {0} run|startup [list|show|start|remove [<name>]]""".format(os.path.basename(__file__))
+  {0} run|startup [list|show|start|stop|remove [<name>]]""".format(os.path.basename(__file__))
 
     parser = argparse.ArgumentParser(description=msg_desc, epilog=msg_epilog, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("mode", help="""p|process     Running processes

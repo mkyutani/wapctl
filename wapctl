@@ -394,12 +394,23 @@ class Startup(Mode):
             return None 
         return "disabled" if (f == "1") else "enabled"
 
+    def runType(self, p):
+        path = p.get("PATH")
+        if path is None:
+            return None
+        loc, typ = path.rsplit("\\", 1)
+        if typ == "Run":
+            return "registry"
+        elif typ == "Run32":
+            return "registry(32bit)"
+        elif typ == "StartupFolder":
+            return "startup"
+
     def doList(self, o):
         print(o.get("NAME"))
 
     def doShow(self, p):
-        loc, typ = p.get("PATH").rsplit("\\", 1)
-        print("{1}{0}{2}{0}{3}".format(self.sep(), p.get("NAME") or "", typ, self.state(p) or ""))
+        print("{1}{0}{2}{0}{3}".format(self.sep(), p.get("NAME") or "", self.runType(p) or "", self.state(p) or ""))
 
     def doStart(self, p):
         if p.get("NAME") is None:

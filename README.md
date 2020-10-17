@@ -189,9 +189,9 @@ $ wapctl svc stop search
 Stop Windows Search (WSearch), ok? [Y/n]
 ```
 
-### Startup programs in Shell:Startup and 'Run' registry
+### Startup programs in Shell startup, 'Run' registry and UWP
 
-You can list, show information, start and remove the startup programs in Shell:Startup and 'Run' registry.
+You can list, show information, start and remove the startup programs in Shell startup, 'Run' registry and Universal Windows Platform (UWP) startup task.
 
 * List the startup programs.
 
@@ -202,23 +202,25 @@ $ wapctl run list docker
 Docker Desktop
 ```
 
-* Show information of the startup programs. Output columns mean (1)name, (2)command line, (3)type, (4)location, respectively.
+* Show information of the startup programs. Output columns mean (1)name, (2)type, and (3)state.
 
 ```bash
+$ wapctl run show docker
+Docker Desktop Run:User enabled
 ```
 
-* Start the startup programs.
+* Enable the startup programs.  This operation DOESN'T START ANY STOPPED TASKS but only set/unset flags in registry.
 
 ```bash
 $ wapctl run start docker
-Start Docker Desktop (C:\Program Files\Docker\Docker\Docker Desktop.exe), ok? [Y/n]
+Enable Docker Desktop (disabled), ok? [Y/n]
 ```
 
-* Remove the startup programs.
+* Disable the startup programs.  This operation DOESN'T STOP ANY RUNNING TASKS but only set/unset flags in registry.
 
 ```bash
-$ wapctl run remove docker
-Remove Docker Desktop (Microsoft.PowerShell.Core\Registry::HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\Docker Desktop), ok? [y/N]
+$ wapctl run stop docker
+Disable Docker Desktop (enabled), ok? [Y/n]
 ```
 
 ## Options

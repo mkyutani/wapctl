@@ -21,14 +21,16 @@ Wapctl depends on some environmental items.
 
 ### Preparation for Python of Windows Store Version
 
-1. Install Python 3.8 from Windows Store.
-2. Upgrade pip.
-```bash
-$ python -m pip install --upgrade pip
+Install Python 3.8 from Windows Store and upgrade pip.
+
 ```
-3.Install chardet library.
-```bash
-$ pip install chardet
+C:\> python -m pip install --upgrade pip
+```
+
+Install chardet library.
+
+```
+C:\> pip install chardet
 ```
 
 ## Usage

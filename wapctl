@@ -6,6 +6,7 @@ import os
 import re
 import sys
 import argparse
+import platform
 import subprocess
 from enum import IntEnum
 from subprocess import PIPE, DEVNULL
@@ -18,6 +19,8 @@ class Shell:
 
     def ps(cmd):
         cmdline = "powershell.exe -command \"& {" + cmd + "}\""
+        if platform.system() == "Windows":
+            cmdline = cmdline.replace("\$", "$")
         proc = subprocess.Popen(cmdline, shell=True, stdout=PIPE)
         out, err = proc.communicate()
         return out
@@ -246,7 +249,7 @@ class Application(Mode):
             self.warningNoCommandCandidates(o.get("NAME"))
         else:
             if self.confirm("Run", o.get("NAME"), o.get("PATH")):
-                Shell.ps("start-process \\\"shell:appsfolder\\\\" + o.get("PATH") + "\\\"")
+                Shell.ps("start-process \\\"shell:appsfolder\\" + o.get("PATH") + "\\\"")
 
 class Installed(Mode):
         
@@ -309,7 +312,7 @@ class Package(Mode):
             self.warningNoCommandCandidates(p.get("NAME"))
         else:
             if self.confirm("Start", p.get("NAME"), p.get("PACKAGEFAMILYNAME")):
-                Shell.ps("start-process \\\"shell:appsfolder\\\\" + p.get("PACKAGEFAMILYNAME") + "!" + p.get("APID") + "\\\"")
+                Shell.ps("start-process \\\"shell:appsfolder\\" + p.get("PACKAGEFAMILYNAME") + "!" + p.get("APID") + "\\\"")
 
     def doRemove(self, o):
         if o.get("PACKAGEFULLNAME") is None:

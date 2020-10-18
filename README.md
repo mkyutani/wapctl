@@ -11,15 +11,25 @@ Copy wapctl to the directory for executable programs (ex. /usr/local/bin, ~/bin)
 $ cp -pf wapctl /usr/local/bin
 $ chmod +x /usr/local/bin/wapctl
 ```
-
 ### Environment
 
 Wapctl depends on some environmental items.
 
 * Windows 10
 * Windows PowerShell 5.1
-* Windows Subsytem for Linux (Ubuntu)
-* Python 3 (use subprocess)
+* Python 3.8 (WSL or Windows Store Version)
+
+### Preparation for Python of Windows Store Version
+
+1. Install Python 3.8 from Windows Store.
+2. Upgrade pip.
+```bash
+$ python -m pip install --upgrade pip
+```
+3.Install chardet library.
+```bash
+$ pip install chardet
+```
 
 ## Usage
 

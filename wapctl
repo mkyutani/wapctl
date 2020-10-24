@@ -375,11 +375,7 @@ class Startup(Mode):
         self.name_key_u = "NAME"
 
     def prepareObjectList(self):
-        cmd_reg = "\$k1 = get-item \\\"HKCU:\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$r1 = (\$k1.getvaluenames() |%{ \$n = \$_; [pscustomobject]@{ id = \$k1.pspath + \\\"\\\\\\\" + \$n; name = \$n; type = \$k1.getvaluekind(\$n); command = \$k1.getvalue(\$n); task = \\\"Run:User\\\" }}); \$k2 = get-item \\\"HKLM:\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$r2 = (\$k2.getvaluenames() |%{ \$n = \$_; [pscustomobject]@{ id = \$k2.pspath + \\\"\\\\\\\" + \$n; name = \$n; type = \$k2.getvaluekind(\$n); command = \$k2.getvalue(\$n); task = \\\"Run:System\\\" }}); \$k3 = get-item \\\"HKLM:\\\\SOFTWARE\\\\Wow6432Node\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run\\\"; \$r3 = (\$k3.getvaluenames() |%{ \$n = \$_; [pscustomobject]@{ id = \$k3.pspath + \\\"\\\\\\\" + \$n; name = \$n; type = \$k3.getvaluekind(\$n); command = \$k3.getvalue(\$n); task = \\\"Run:Wow32\\\" }})"
-        cmd_shell = "\$r4 = ((new-object -com shell.application).namespace(\\\"shell:Startup\\\").items() |%{ [pscustomobject]@{ id = \\\"Shell:Startup\\\\\\\" + \$_.name; name = \$_.name; type = \$_.type; command = \$_.path; task = \\\"Startup:User\\\" }}); \$r5 = ((new-object -com shell.application).namespace(\\\"shell:Common Startup\\\").items() |%{ [pscustomobject]@{ id = \\\"Shell:Common Startup\\\\\\\" + \$_.name; name= \$_.name; type = \$_.type; command = \$_.path; task = \\\"Startup:System\\\" }})"
-        cmd_nuwp = "\$z = get-itemproperty \\\"HKLM:\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Explorer\\\\StartupApproved\\\\*\\\", \\\"HKCU:\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Explorer\\\\StartupApproved\\\\*\\\"; \$nuwp = (\$r1+\$r2+\$r3+\$r4+\$r5 |? command -ne \\\"\\\" |%{ \$o = [pscustomobject]@{ id = \$_.id; name = \$_.name; command = \$_.command; path = \$null; disabled = 0; task = \$_.task }; \$z |%{ \$p = \$_.PSPath; \$_ | get-member -type noteproperty |? name -eq \$o.name |%{ \$v = get-itempropertyvalue \$p -name \$o.name; \$o.path = \$p; \$o.disabled = \$v[0] -band 1 }}; \$o})"
-        cmd_uwp = "\$uwp = (get-appxpackage |% { \$x = \$_; \$t = (get-appxpackagemanifest \$_).package.applications.application.extensions.extension |? category -eq \\\"windows.startuptask\\\"; if (\$t -ne \$null) { \$p = \\\"HKCU:\\\\Software\\\\Classes\\\\Local Settings\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\AppModel\\\\SystemAppData\\\\\\\" + \$x.packagefamilyname + \\\"\\\\\\\" + \$t.startuptask.taskid; \$s = (get-item (\$p)).getvalue(\\\"state\\\"); \$o = [pscustomobject]@{ id = \\\"AppXPackage\\\\\\\" + \$x.packagefullname + \\\"\\\\\\\" + \$x.version; name = \$x.name; command = \$x.installlocation + \\\"\\\\\\\" + \$t.executable; path = \$p; task=\\\"UWP\\\"; disabled = \$s -band 1 }; \$o }})"
-        cmd = "{};{};{};{};{}".format(cmd_reg, cmd_shell, cmd_nuwp, cmd_uwp, "\$nuwp+\$uwp")
+        cmd = "\$r = @(); \$ns = \\\"\\\\Software\\\\\\\"; \$nw = \\\"Microsoft\\\\Windows\\\\CurrentVersion\\\\\\\"; \$nr = \$nw + \\\"Run\\\"; \$ne = \\\":\\\" + \$ns + \$nw + \\\"Explorer\\\\StartupApproved\\\\*\\\"; \$nm = \\\"HKLM:\\\" + \$ns; \$nc = \\\"HKCU:\\\" + \$ns; \$l = @(\\\"User\\\", \\\"System\\\", \\\"WoW\\\"); \$e = @(\$nc, \$nm, (\$nm + \\\"Wow6432Node\\\\\\\")); \$f = @(\\\"\\\", \\\"Common \\\"); foreach (\$i in 0..2) { \$k = get-item (\$e[\$i] + \$nr); \$k.getvaluenames() |%{ \$r += [pscustomobject]@{ l = \\\"Run:\\\" + \$l[\$i]; n = \$_; c = \$k.getvalue(\$_) }}}; foreach (\$i in 0..1) { ((new-object -com shell.application).namespace(\\\"shell:\\\" + \$f[\$i] + \\\"Startup\\\").items() |%{ \$r += [pscustomobject]@{ l = \\\"Startup:\\\" + \$l[\$i]; n = \$_.name; c = \$_.path }})}; \$x = get-itemproperty (\\\"HKLM\\\" + \$ne), (\\\"HKCU\\\" + \$ne); \$nuwp = (\$r |? command -ne \\\"\\\" |%{ \$o = [pscustomobject]@{ location = \$_.l; name = \$_.n; disabled = 0; command = \$_.c; path = \$null }; \$x |%{ \$p = \$_.PSPath; \$_ | get-member -type noteproperty |? name -eq \$o.name |%{ \$v = get-itempropertyvalue \$p -name \$o.name; \$o.path = \$p; \$o.disabled = \$v[0] -band 1 }}; \$o }); \$uwp = (get-appxpackage |% { \$x = \$_; \$t = (get-appxpackagemanifest \$_).package.applications.application.extensions.extension |? category -like \\\"*.startuptask\\\"; if (\$t -ne \$null) { \$p = \$nc + \\\"Classes\\\\Local Settings\\\" + \$ns + \$nw + \\\"AppModel\\\\SystemAppData\\\\\\\" + \$x.packagefamilyname + \\\"\\\\\\\" + \$t.startuptask.taskid; \$s = (get-item \$p).getvalue(\\\"state\\\"); \$o = [pscustomobject]@{ location = \\\"UWP\\\"; name = \$x.name; disabled = \$s -band 1; command = \$x.installlocation + \\\"\\\\\\\" + \$t.executable; path = \$p }; \$o }}); \$nuwp+\$uwp"
         object_list = self.createObjectList(cmd)
         return sorted(object_list, key=lambda x:x["NAME"].upper())
 
@@ -390,13 +386,13 @@ class Startup(Mode):
         return "disabled" if (f == "1") else "enabled"
 
     def taskType(self, o):
-        return o.get("TASK")
+        return o.get("LOCATION")
 
     def doList(self, o):
         print(o.get("NAME"))
 
     def doShow(self, o):
-        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), o.get("NAME") or "", self.taskType(o) or "", self.state(o) or "", o.get("COMMAND") or ""))
+        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), o.get("NAME") or "", o.get("LOCATION") or "", self.state(o) or "", o.get("COMMAND") or ""))
 
     def doStart(self, o):
         if o.get("NAME") is None:

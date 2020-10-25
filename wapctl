@@ -413,6 +413,23 @@ class Startup(Mode):
             return None 
         return "disabled" if (f == "1") else "enabled"
 
+    def buildStatePath(self, o):
+        location = o.get("LOCATION")
+        if location == "Run:WoW":
+            root = "HKLM"
+            subfolder = "Run32"
+        else:
+            loctype, locowner = location.split(":")
+            if locowner == "User":
+                root = "HKCU"
+            else:
+                root = "HKLM"
+            if loctype == "Startup":
+                subfolder = "StartupFolder"
+            else:
+                subfolder = "Run"
+        return root + ":\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\" + subfolder
+
     def taskType(self, o):
         return o.get("LOCATION")
 
@@ -430,7 +447,10 @@ class Startup(Mode):
                 if self.taskType(o) == "UWP":
                     Shell.ps("set-itemproperty -path \\\"" + o.get("PATH") + "\\\" -name state -value 2")
                 else:
-                    Shell.ps("\$k = \\\"" + o.get("PATH") + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; \$v = get-itempropertyvalue \$k -name \$n; \$v[0] = \$v[0] -band 0xfe; set-itemproperty \$k -name \$n -value \$v")
+                    if len(o.get("PATH")) > 0:
+                        Shell.ps("\$k = \\\"" + o.get("PATH") + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; \$v = get-itempropertyvalue \$k -name \$n; \$v[0] = \$v[0] -band 0xfe; set-itemproperty \$k -name \$n -value \$v")
+                    else:
+                        Shell.ps("\$k = \\\"" + self.buildStatePath(o) + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; set-itemproperty \$k -name \$n -value ([byte[]]@(2,0,0,0,0,0,0,0,0,0,0,0))")
 
     def doStop(self, o):
         if o.get("NAME") is None:
@@ -440,7 +460,10 @@ class Startup(Mode):
                 if self.taskType(o) == "UWP":
                     Shell.ps("set-itemproperty -path \\\"" + o.get("PATH") + "\\\" -name state -value 1")
                 else:
-                    Shell.ps("\$k = \\\"" + o.get("PATH") + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; \$v = get-itempropertyvalue \$k -name \$n; \$v[0] = \$v[0] -bor 1; set-itemproperty \$k -name \$n -value \$v")
+                    if len(o.get("PATH")) > 0:
+                        Shell.ps("\$k = \\\"" + o.get("PATH") + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; \$v = get-itempropertyvalue \$k -name \$n; \$v[0] = \$v[0] -bor 1; set-itemproperty \$k -name \$n -value \$v")
+                    else:
+                        Shell.ps("\$k = \\\"" + self.buildStatePath(o) + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; set-itemproperty \$k -name \$n -value ([byte[]]@(1,0,0,0,0,0,0,0,0,0,0,0))")
 
     def doPrintHeader(self):
         print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), "name", "location", "state", "command"))

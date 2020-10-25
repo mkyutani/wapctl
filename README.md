@@ -21,14 +21,14 @@ Wapctl depends on some environmental items.
 
 ### Preparation for Python of Windows Store Version
 
-Install Python 3.8 from Windows Store and upgrade pip.
+1. Install Python 3.8 from Windows Store.
 
+2. Upgrade pip.
 ```
 C:\> python -m pip install --upgrade pip
 ```
 
-Install chardet library.
-
+3. Install chardet library.
 ```
 C:\> pip install chardet
 ```
@@ -36,12 +36,11 @@ C:\> pip install chardet
 ## Usage
 
 The basic command interface of wapctl is like `wapctl mode [op [target]]`.
-`Mode` is one of `process` (abbrev. `p`), `application` (`a`),
-`installed` (`ins`), `package` (`pkg`), `service` (`svc`), and `startup` (`run`). You cannot omit `mode` parameter.
-`Op` is one of `list`, `show`, `start`, `stop`, and `remove`. Wapctl assumes `list` if you omit `op` parameters.
-You can also specify the `target` parameter which specifies the complete or partial name of targets, case insensitively.
+You must ONE `Mode` parameter which is one of `process` (abbrev. `p`), `application` (`a`), `installed` (`ins`), `package` (`pkg`), `service` (`svc`), and `startup` (`run`).
+`Op` is one of `list`, `show`, `start`, `stop`, and `remove`. Wapctl assumes `list` if you give no `op` parameters.
+You may also give the `target` parameter which specifies the complete or partial name of targets, case insensitively.
 
-You cannot show some information and control targets (eg. Win32 services) without administrator privileges.  Let you become an account with administrator privileges and run-as-administrator WSL bash.
+You cannot show some information and control targets (eg. Win32 services) without administrator privileges.  Let you become an account with administrator privileges and run-as-administrator WSL bash or Command Prompt.
 
 ### Running processes
 
@@ -246,6 +245,9 @@ Disable Docker Desktop (enabled), ok? [Y/n]
 * -y
 * --yes
   * Assume yes
+* -H
+* --print-header
+  * Print header
 
 ## Contributing
 Pull requests are welcome.

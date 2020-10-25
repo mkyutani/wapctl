@@ -15,6 +15,7 @@ which ./wapctl
 ./wapctl a list 電卓
 ./wapctl a show 電卓 -s, -H
 ./wapctl a start 電卓 -y
+./wapctl p show calculator -s, -H
 ./wapctl p stop calculator -y
 
 ./wapctl ins
@@ -28,6 +29,7 @@ which ./wapctl
 ./wapctl pkg list paint
 ./wapctl pkg show paint -s, -H
 ./wapctl pkg start microsoft.mspaint -y
+./wapctl p show paintstudio -s, -H
 ./wapctl p stop paintstudio -y
 ./wapctl pkg remove paint
 

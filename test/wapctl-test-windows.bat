@@ -12,6 +12,7 @@ python wapctl a list wap-name-which-does-not-exist
 python wapctl a list “d‘ì
 python wapctl a show “d‘ì -s, -H
 python wapctl a start “d‘ì -y
+python wapctl p show calculator -s, -H
 python wapctl p stop calculator -y
 
 python wapctl ins
@@ -25,6 +26,7 @@ python wapctl pkg list wap-name-which-does-not-exist
 python wapctl pkg list paint
 python wapctl pkg show paint -s, -H
 python wapctl pkg start microsoft.mspaint -y
+python wapctl p show paintstudio -s, -H
 python wapctl p stop paintstudio -y
 python wapctl pkg remove paint
 

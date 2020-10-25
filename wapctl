@@ -126,19 +126,22 @@ class Mode:
     target_u = None
     separator = None
     flag_yes = False
+    flag_header = False
 
     @classmethod
-    def createModeList(cls, target, sep, flag_yes=False):
+    def createModeList(cls, target, sep, flag_yes=False, flag_header=False):
         cls.mode_list = [Process(), Application(), Installed(), Package(), Service(), Startup()]
         if target is not None:
             cls.target_u = target.upper()
         cls.separator = sep
         cls.flag_yes = flag_yes
+        cls.flag_header = flag_header
         return cls.mode_list
     
     def __init__(self):
         self.object_func_list = [None] * Mode.OpIndex.MAX
         self.property_func_list = [None] * Mode.OpIndex.MAX
+        self.header_func_list = [None] * Mode.OpIndex.MAX
         self.name_key_u = None
 
     def sep(self):
@@ -172,11 +175,15 @@ class Mode:
         object_list = self.prepareObjectList()
         if len(object_list) > 0:
             if self.object_func_list[op_no] is not None:
+                if self.flag_header and self.header_func_list[op_no] is not None:
+                    self.header_func_list[op_no]()
                 for o in object_list:
                     self.object_func_list[op_no](o)
             if self.property_func_list[op_no] is not None:
                 props_list = self.preparePropertiesList(object_list)
                 if len(props_list) > 0:
+                    if self.flag_header and self.header_func_list[op_no] is not None:
+                        self.header_func_list[op_no]()
                     for p in props_list:
                         self.property_func_list[op_no](p)
         return True
@@ -195,6 +202,7 @@ class Process(Mode):
         super().__init__()
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
         self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
+        self.header_func_list[Mode.OpIndex.SHOW] = self.doPrintHeader
         self.property_func_list[Mode.OpIndex.STOP] = self.doStop
         self.name_key_u = "PROCESSNAME"
 
@@ -225,12 +233,16 @@ class Process(Mode):
         if self.confirm("Stop", p.get("PROCESSNAME"), p.get("ID")):
             Shell.ps("stop-process -id " + p.get("ID"))
 
+    def doPrintHeader(self):
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}".format(self.sep(), "name", "pid", "priority", "owner", "product", "version", "company", "command"))
+
 class Application(Mode):
         
     def __init__(self):
         super().__init__()
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
         self.object_func_list[Mode.OpIndex.SHOW] = self.doShow
+        self.header_func_list[Mode.OpIndex.SHOW] = self.doPrintHeader
         self.object_func_list[Mode.OpIndex.START] = self.doStart
         self.name_key_u = "NAME"
 
@@ -251,12 +263,16 @@ class Application(Mode):
             if self.confirm("Run", o.get("NAME"), o.get("PATH")):
                 Shell.ps("start-process \\\"shell:appsfolder\\" + o.get("PATH") + "\\\"")
 
+    def doPrintHeader(self):
+        print("{1}{0}{2}".format(self.sep(), "name", "path"))
+
 class Installed(Mode):
         
     def __init__(self):
         super().__init__()
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
         self.object_func_list[Mode.OpIndex.SHOW] = self.doShow
+        self.header_func_list[Mode.OpIndex.SHOW] = self.doPrintHeader
         self.object_func_list[Mode.OpIndex.REMOVE] = self.doRemove
         self.name_key_u = "NAME"
 
@@ -278,12 +294,16 @@ class Installed(Mode):
             if self.confirm("Uninstall", o.get("NAME"), o.get("UNINSTALL"), no_by_default=True):
                 Shell.traditional(o.get("UNINSTALL"))
 
+    def doPrintHeader(self):
+        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), "name", "version", "publisher", "uninstall"))
+
 class Package(Mode):
 
     def __init__(self):
         super().__init__()
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
         self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
+        self.header_func_list[Mode.OpIndex.SHOW] = self.doPrintHeader
         self.property_func_list[Mode.OpIndex.START] = self.doStart
         self.object_func_list[Mode.OpIndex.REMOVE] = self.doRemove
         self.name_key_u = "NAME"
@@ -321,12 +341,16 @@ class Package(Mode):
             if self.confirm("Uninstall", o.get("NAME"), o.get("PACKAGEFULLNAME"), no_by_default=True):
                 Shell.ps("remove-appxpackage \\\"" + o.get("PACKAGEFULLNAME") + "\\\"")
 
+    def doPrintHeader(self):
+        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), "name", "package", "publisher", "executable"))
+
 class Service(Mode):
 
     def __init__(self):
         super().__init__()
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
         self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
+        self.header_func_list[Mode.OpIndex.SHOW] = self.doPrintHeader
         self.property_func_list[Mode.OpIndex.START] = self.doStart
         self.property_func_list[Mode.OpIndex.STOP] = self.doStop
         self.name_key_u = "DISPLAYNAME"
@@ -364,12 +388,16 @@ class Service(Mode):
             if self.confirm("Stop", p.get("DISPLAYNAME"), p.get("NAME")):
                 Shell.ps("(get-wmiobject win32_service | where-object name -eq \"" + p.get("NAME") + "\").stopservice()")
 
+    def doPrintHeader(self):
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}".format(self.sep(), "name", "internal", "mode", "state", "pid", "path"))
+
 class Startup(Mode):
 
     def __init__(self):
         super().__init__()
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
         self.object_func_list[Mode.OpIndex.SHOW] = self.doShow
+        self.header_func_list[Mode.OpIndex.SHOW] = self.doPrintHeader
         self.object_func_list[Mode.OpIndex.START] = self.doStart
         self.object_func_list[Mode.OpIndex.STOP] = self.doStop
         self.name_key_u = "NAME"
@@ -414,6 +442,9 @@ class Startup(Mode):
                 else:
                     Shell.ps("\$k = \\\"" + o.get("PATH") + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; \$v = get-itempropertyvalue \$k -name \$n; \$v[0] = \$v[0] -bor 1; set-itemproperty \$k -name \$n -value \$v")
 
+    def doPrintHeader(self):
+        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), "name", "location", "state", "command"))
+
 if __name__ == "__main__":
 
     msg_desc = "Windows application control"
@@ -436,6 +467,7 @@ run|startup   Startup programs in Shell startup, 'Run' registry and UWP""")
     parser.add_argument("target", nargs="?", default=None, help="target name")
     parser.add_argument("-s", "--separator", nargs=1, default=" ", help="field separator for output")
     parser.add_argument("-y", "--yes", action="store_true", help="assume yes")
+    parser.add_argument("-H", "--print-header", action="store_true", help="print header")
     args = parser.parse_args()
 
     mode_no = Mode.Index.NONE
@@ -458,7 +490,7 @@ run|startup   Startup programs in Shell startup, 'Run' registry and UWP""")
         parser.print_help(file=sys.stderr)
         exit(1)
 
-    mode_list = Mode.createModeList(args.target, args.separator[0], args.yes)
+    mode_list = Mode.createModeList(args.target, args.separator[0], args.yes, args.print_header)
     if mode_list[mode_no].op(op_no) == False:
         exit(1)
 

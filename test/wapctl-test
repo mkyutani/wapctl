@@ -7,26 +7,26 @@ which ./wapctl
 ./wapctl p
 ./wapctl p list wap-name-which-does-not-exist
 ./wapctl p list calc
-./wapctl p show calc -s,
+./wapctl p show calc -s, -H
 ./wapctl p stop calculator -y
 
 ./wapctl a
 ./wapctl a list wap-name-which-does-not-exist
 ./wapctl a list 電卓
-./wapctl a show 電卓 -s,
+./wapctl a show 電卓 -s, -H
 ./wapctl a start 電卓 -y
 ./wapctl p stop calculator -y
 
 ./wapctl ins
 ./wapctl ins list wap-name-which-does-not-exist
 ./wapctl ins list zoom
-./wapctl ins show zoom -s,
+./wapctl ins show zoom -s, -H
 ./wapctl ins remove zoom
 
 ./wapctl pkg
 ./wapctl pkg list wap-name-which-does-not-exist
 ./wapctl pkg list paint
-./wapctl pkg show paint -s,
+./wapctl pkg show paint -s, -H
 ./wapctl pkg start microsoft.mspaint -y
 ./wapctl p stop paintstudio -y
 ./wapctl pkg remove paint
@@ -34,20 +34,20 @@ which ./wapctl
 ./wapctl svc
 ./wapctl svc list wap-name-which-does-not-exist
 ./wapctl svc list docker
-./wapctl svc show docker -s,
+./wapctl svc show docker -s, -H
 ./wapctl svc stop docker -y
-./wapctl svc show docker -s,
+./wapctl svc show docker -s, -H
 ./wapctl svc start docker -y
-./wapctl svc show docker -s,
+./wapctl svc show docker -s, -H
 
 ./wapctl run
 ./wapctl run list wap-name-which-does-not-exist
 ./wapctl run list docker
-./wapctl run show docker -s,
+./wapctl run show docker -s, -H
 ./wapctl run stop docker -y
-./wapctl run show docker -s,
+./wapctl run show docker -s, -H
 ./wapctl run start docker -y
-./wapctl run show docker -s,
+./wapctl run show docker -s, -H
 
 
 

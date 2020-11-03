@@ -216,7 +216,7 @@ class Process(Mode):
         for o in olist:
             idlist = idlist + sep + o.get("ID")
             sep = ","
-        cmd = "get-process -id " + idlist + " |%{ \$p = \$_; \$x = \$_.id; get-ciminstance -classname Win32_Process -namespace root\\cimv2 -filter \\\"processid = \$x\\\" |%{ \$u = (invoke-cimmethod -inputobject \$_ -methodname getowner); [pscustomobject]@{ id = \$p.id; processname = \$p.processname; domain = \$u.domain; user = \$u.user; path = \$_.executablepath; cmd = \$_.commandline; priority = \$_.priority; product = \$p.product; productversion = \$p.productversion; company = \$p.company }}}"
+        cmd = "get-process -id " + idlist + " |%{ \$p = \$_; \$x = \$_.id; get-ciminstance -classname Win32_Process -namespace root\\cimv2 -filter \\\"processid = \$x\\\" |%{ \$u = (invoke-cimmethod -inputobject \$_ -methodname getowner); [pscustomobject]@{ id = \$p.id; processname = \$p.processname; domain = \$u.domain; user = \$u.user; path = \$_.executablepath; cmd = \$_.commandline; priority = \$_.priority; product = \$p.product; productversion = \$p.productversion; company = \$p.company; description = \$p.description }}}"
         return self.createPropertiesList(cmd)
 
     def doList(self, o):
@@ -227,14 +227,14 @@ class Process(Mode):
         owner = p.get("USER") or ""
         if domain is not None:
             owner = domain + "\\" + owner
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}".format(self.sep(), p.get("PROCESSNAME"), p.get("ID"), p.get("PRIORITY") or "", owner, p.get("PRODUCT") or "", p.get("PRODUCTVERSION") or "", p.get("COMPANY") or "", p.get("PATH") or "", p.get("CMD") or ""))
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}".format(self.sep(), p.get("PROCESSNAME"), p.get("ID"), p.get("PRIORITY") or "", owner, p.get("PRODUCT") or "", p.get("PRODUCTVERSION") or "", p.get("DESCRIPTION") or "", p.get("COMPANY") or "", p.get("PATH") or "", p.get("CMD") or ""))
 
     def doStop(self, p):
         if self.confirm("Stop", p.get("PROCESSNAME"), p.get("ID")):
             Shell.ps("stop-process -id " + p.get("ID"))
 
     def doPrintHeader(self):
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}".format(self.sep(), "name", "pid", "priority", "owner", "product", "version", "company", "path", "command"))
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}".format(self.sep(), "name", "pid", "priority", "owner", "product", "version", "description", "company", "path", "command"))
 
 class Application(Mode):
         

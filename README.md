@@ -52,28 +52,23 @@ You can list, show information and stop the running processes with the complete 
 ```bash
 $ wapctl p list
 ...
-$ wapctl p list docker
-com.docker.backend
-com.docker.proxy
-com.docker.service
-Docker Desktop
-docker-mutagen
-
+$ wapctl p list calc
+Calculator
 ```
 
-* Show information of the running processes. Output columns mean (1)process name, (2)PID, (3)priority, (4)owner, (5)product name,(6)version, (7)company name, (8)executable path, (9)command line, respectively.
+* Show information of the running processes. Output columns mean (1)process name, (2)PID, (3)priority, (4)owner, (5)product name,(6)version, (7)description, (8)company name, (9)executable path, (10)command line, respectively.
 
 
 ```bash
-$ wapctl p show 'Docker Desktop'
-Docker Desktop 812 8 DOMAIN\account Docker Desktop 2.5.0.0 Docker Desktop C:\Program Files\Docker\Docker\Docker Desktop.exe "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+$ wapctl p show calc
+Calculator 19192 8 DOMAIN\account Microsoft Calculator 10.2009.4.0 Calculator.exe Microsoft Corporation C:\Program Files\WindowsApps\Microsoft.WindowsCalculator_10.2009.4.0_x64__8wekyb3d8bbwe\Calculator.exe "C:\Program Files\WindowsApps\Microsoft.WindowsCalculator_10.2009.4.0_x64__8wekyb3d8bbwe\Calculator.exe" -ServerName:App.AppXsm3pg4n7er43kdh1qp4e79f1j7am68r8.mca
 ```
 
 * Stop the running processes.
 
 ```bash
-$ wapctl p stop 'Docker Desktop'
-Stop Docker Desktop (12108), ok? [Y/n]
+$ wapctl p stop calc
+Stop Calculator (19192), ok? [Y/n]
 ```
 
 ### Applications programs in Shell:AppsFolder

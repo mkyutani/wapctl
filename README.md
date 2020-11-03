@@ -61,12 +61,12 @@ docker-mutagen
 
 ```
 
-* Show information of the running processes. Output columns mean (1)process name, (2)PID, (3)priority, (4)owner, (5)product name, and (6)company name, (7)command line, respectively.
+* Show information of the running processes. Output columns mean (1)process name, (2)PID, (3)priority, (4)owner, (5)product name,(6)version, (7)company name, (8)executable path, (9)command line, respectively.
 
 
 ```bash
 $ wapctl p show 'Docker Desktop'
-Docker Desktop 812 8 DOMAIN\account Docker Desktop Docker Desktop "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+Docker Desktop 812 8 DOMAIN\account Docker Desktop 2.5.0.0 Docker Desktop C:\Program Files\Docker\Docker\Docker Desktop.exe "C:\Program Files\Docker\Docker\Docker Desktop.exe"
 ```
 
 * Stop the running processes.

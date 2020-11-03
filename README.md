@@ -56,12 +56,15 @@ $ wapctl p list calc
 Calculator
 ```
 
-* Show information of the running processes. Output columns mean (1)process name, (2)PID, (3)priority, (4)owner, (5)product name,(6)version, (7)description, (8)company name, (9)executable path, (10)command line, respectively.
+* Show information of the running processes. Output columns mean (1)process name, (2)PID, (3)priority, (4)owner, (5)product name,(6)version, (7)description, (8)company name, (9)executable path, (10)command line, respectively.  You can change the column separator with option '-s'.
 
 
 ```bash
 $ wapctl p show calc
 Calculator 19192 8 DOMAIN\account Microsoft Calculator 10.2009.4.0 Calculator.exe Microsoft Corporation C:\Program Files\WindowsApps\Microsoft.WindowsCalculator_10.2009.4.0_x64__8wekyb3d8bbwe\Calculator.exe "C:\Program Files\WindowsApps\Microsoft.WindowsCalculator_10.2009.4.0_x64__8wekyb3d8bbwe\Calculator.exe" -ServerName:App.AppXsm3pg4n7er43kdh1qp4e79f1j7am68r8.mca
+
+$ wapctl p show calc -s, | cut -d, -f 10
+"C:\Program Files\WindowsApps\Microsoft.WindowsCalculator_10.2009.4.0_x64__8wekyb3d8bbwe\Calculator.exe" -ServerName:App.AppXsm3pg4n7er43kdh1qp4e79f1j7am68r8.mca
 ```
 
 * Stop the running processes.

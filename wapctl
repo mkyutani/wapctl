@@ -188,14 +188,6 @@ class Mode:
                         self.property_func_list[op_no](p)
         return True
 
-    def createObjectList(self, cmd):
-        ps = PSArray()
-        return ps.build(cmd, name_key=self.name_key_u, name_target=self.target_u)
-
-    def createPropertiesList(self, cmd):
-        ps = PSArray()
-        return ps.build(cmd, name_key=self.name_key_u)
-
 class Process(Mode):
 
     def __init__(self):
@@ -208,7 +200,7 @@ class Process(Mode):
 
     def prepareObjectList(self):
         cmd = "get-process | select id, processname"
-        return self.createObjectList(cmd)
+        return PSArray().build(cmd, self.name_key_u, self.target_u)
 
     def preparePropertiesList(self, olist):
         sep = ""
@@ -217,7 +209,7 @@ class Process(Mode):
             idlist = idlist + sep + o.get("ID")
             sep = ","
         cmd = "get-process -id " + idlist + " |%{ \$p = \$_; \$x = \$_.id; get-ciminstance -classname Win32_Process -namespace root\\cimv2 -filter \\\"processid = \$x\\\" |%{ \$u = (invoke-cimmethod -inputobject \$_ -methodname getowner); [pscustomobject]@{ id = \$p.id; processname = \$p.processname; domain = \$u.domain; user = \$u.user; path = \$_.executablepath; cmd = \$_.commandline; priority = \$_.priority; product = \$p.product; productversion = \$p.productversion; company = \$p.company; description = \$p.description }}}"
-        return self.createPropertiesList(cmd)
+        return PSArray().build(cmd, self.name_key_u)
 
     def doList(self, o):
         print(o.get("PROCESSNAME"))
@@ -248,7 +240,7 @@ class Application(Mode):
 
     def prepareObjectList(self):
         cmd = "(new-object -com shell.application).namespace(\\\"shell:appsfolder\\\").items() | select-object name, path"
-        return self.createObjectList(cmd)
+        return PSArray().build(cmd, self.name_key_u, self.target_u)
 
     def doList(self, o):
         print(o.get("NAME"))
@@ -278,7 +270,7 @@ class Installed(Mode):
 
     def prepareObjectList(self):
         cmd = "get-item (\\\"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\\\", \\\"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\\\", \\\"HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\\\") |%{ \$k = \$_; \$k.getvalue(\\\"UninstallString\\\") |% { if (\$_ -ne \$null) { [pscustomobject]@{ key = \$k.pspath; name = \$k.getvalue(\\\"DisplayName\\\"); version = \$k.getvalue(\\\"DisplayVersion\\\"); publisher = \$k.getvalue(\\\"Publisher\\\"); uninstall = \$_ }}}}"
-        return self.createObjectList(cmd)
+        return PSArray().build(cmd, self.name_key_u, self.target_u)
 
     def doList(self, o):
         if len(o.get("NAME")) > 0:
@@ -310,7 +302,7 @@ class Package(Mode):
 
     def prepareObjectList(self):
         cmd = "get-appxpackage *"
-        return self.createObjectList(cmd)
+        return PSArray().build(cmd, self.name_key_u, self.target_u)
 
     def preparePropertiesList(self, olist):
         sep = ""
@@ -319,7 +311,7 @@ class Package(Mode):
             name_list = name_list + sep + "\\\"" + o.get("NAME") + "\\\""
             sep = ","
         cmd = "(" + name_list + ") |%{ get-appxpackage -name \$_ |%{ \$x = \$_; \$q = (get-appxpackagemanifest -package \$x).package; \$p = \$q.properties; \$a = \$q.applications.application; [pscustomobject]@{ name = \$x.name; packagefullname = \$x.packagefullname; packagefamilyname = \$x.packagefamilyname; publisherdisplayname = \$p.publisherdisplayname; apid = \$a.id; executable = \$a.executable } }}"
-        return self.createPropertiesList(cmd)
+        return PSArray().build(cmd, self.name_key_u)
 
     def doList(self, o):
         print(o.get("NAME"))
@@ -357,7 +349,7 @@ class Service(Mode):
 
     def prepareObjectList(self):
         cmd = "get-service | select-object name, displayname"
-        return self.createObjectList(cmd)
+        return PSArray().build(cmd, self.name_key_u, self.target_u)
 
     def preparePropertiesList(self, olist):
         sep = ""
@@ -366,7 +358,7 @@ class Service(Mode):
             name_list = name_list + sep + "name=\'" + o.get("NAME") + "\'"
             sep = " or "
         cmd = "get-ciminstance -class win32_service -filter \\\"" + name_list + "\\\" | select-object name, displayname, processid, startmode, state, pathname"
-        return self.createPropertiesList(cmd)
+        return PSArray().build(cmd, self.name_key_u)
 
     def doList(self, o):
         print(o.get("DISPLAYNAME"))
@@ -404,7 +396,7 @@ class Startup(Mode):
 
     def prepareObjectList(self):
         cmd = "\$r = @(); \$ns = \\\"\\\\Software\\\\\\\"; \$nw = \\\"Microsoft\\\\Windows\\\\CurrentVersion\\\\\\\"; \$nr = \$nw + \\\"Run\\\"; \$ne = \\\":\\\" + \$ns + \$nw + \\\"Explorer\\\\StartupApproved\\\\*\\\"; \$nm = \\\"HKLM:\\\" + \$ns; \$nc = \\\"HKCU:\\\" + \$ns; \$l = @(\\\"User\\\", \\\"System\\\", \\\"WoW\\\"); \$e = @(\$nc, \$nm, (\$nm + \\\"Wow6432Node\\\\\\\")); \$f = @(\\\"\\\", \\\"Common \\\"); foreach (\$i in 0..2) { \$k = get-item (\$e[\$i] + \$nr); \$k.getvaluenames() |%{ \$r += [pscustomobject]@{ l = \\\"Run:\\\" + \$l[\$i]; n = \$_; c = \$k.getvalue(\$_) }}}; foreach (\$i in 0..1) { ((new-object -com shell.application).namespace(\\\"shell:\\\" + \$f[\$i] + \\\"Startup\\\").items() |%{ \$r += [pscustomobject]@{ l = \\\"Startup:\\\" + \$l[\$i]; n = \$_.name; c = \$_.path }})}; \$x = get-itemproperty (\\\"HKLM\\\" + \$ne), (\\\"HKCU\\\" + \$ne); \$nuwp = (\$r |? c -ne \\\"\\\" |%{ \$o = [pscustomobject]@{ location = \$_.l; name = \$_.n; disabled = 0; command = \$_.c; path = \$null }; \$x |%{ \$p = \$_.PSPath; \$_ | get-member -type noteproperty |? name -eq \$o.name |%{ \$v = get-itempropertyvalue \$p -name \$o.name; \$o.path = \$p; \$o.disabled = \$v[0] -band 1 }}; \$o }); \$uwp = (get-appxpackage |% { \$x = \$_; \$t = (get-appxpackagemanifest \$_).package.applications.application.extensions.extension |? category -like \\\"*.startuptask\\\"; if (\$t -ne \$null) { \$p = \$nc + \\\"Classes\\\\Local Settings\\\" + \$ns + \$nw + \\\"AppModel\\\\SystemAppData\\\\\\\" + \$x.packagefamilyname + \\\"\\\\\\\" + \$t.startuptask.taskid; \$s = (get-item \$p).getvalue(\\\"state\\\"); \$o = [pscustomobject]@{ location = \\\"UWP\\\"; name = \$x.name; disabled = \$s -band 1; command = \$x.installlocation + \\\"\\\\\\\" + \$t.executable; path = \$p }; \$o }}); \$nuwp+\$uwp"
-        object_list = self.createObjectList(cmd)
+        object_list = PSArray().build(cmd, self.name_key_u, self.target_u)
         return sorted(object_list, key=lambda x:x["NAME"].upper())
 
     def state(self, o):

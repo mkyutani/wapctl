@@ -323,8 +323,13 @@ class Package(Mode):
         if p.get("PACKAGEFAMILYNAME") is None:
             self.warningNoCommandCandidates(p.get("NAME"))
         else:
-            if self.confirm("Start", p.get("NAME"), p.get("PACKAGEFAMILYNAME")):
-                Shell.ps("start-process \\\"shell:appsfolder\\" + p.get("PACKAGEFAMILYNAME") + "!" + p.get("APID") + "\\\"")
+            cmd = "\$e = (get-appxpackagemanifest -package \\\"" + p.get("PACKAGEFULLNAME") + "\\\").package.applications.application.id; if (\$e -ne \$null) { \$e = @() + \$e }; (.{foreach (\$i in \$e) {[pscustomobject]@{id=\$i}}})"
+            exec_list = PSArray().build(cmd, "ID")
+            if len(exec_list) > 0:
+                for x in exec_list:
+                    path = p.get("PACKAGEFAMILYNAME") + "!" + x.get("ID")
+                    if self.confirm("Start", p.get("NAME"), path):
+                        Shell.ps("start-process \\\"shell:appsfolder\\" + path + "\\\"")
 
     def doRemove(self, o):
         if o.get("PACKAGEFULLNAME") is None:

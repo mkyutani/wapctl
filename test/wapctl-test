@@ -26,11 +26,11 @@ which ./wapctl
 
 ./wapctl pkg
 ./wapctl pkg list wap-name-which-does-not-exist
-./wapctl pkg list paint
-./wapctl pkg show paint -s, -H
-./wapctl pkg start microsoft.mspaint -y
-./wapctl p show paintstudio -s, -H
-./wapctl p stop paintstudio -y
+./wapctl pkg list microsoft.microsoftedge
+./wapctl pkg show microsoft.microsoftedge -s, -H
+./wapctl pkg start microsoft.microsoftedge -y
+./wapctl p show msedge -s, -H
+./wapctl p stop msedge -y
 ./wapctl pkg remove paint
 
 ./wapctl svc

@@ -23,11 +23,11 @@ python wapctl ins remove zoom
 
 python wapctl pkg
 python wapctl pkg list wap-name-which-does-not-exist
-python wapctl pkg list paint
-python wapctl pkg show paint -s, -H
-python wapctl pkg start microsoft.mspaint -y
-python wapctl p show paintstudio -s, -H
-python wapctl p stop paintstudio -y
+python wapctl pkg list microsoft.microsoftedge
+python wapctl pkg show microsoft.microsoftedge -s, -H
+python wapctl pkg start microsoft.microsoftedge -y
+python wapctl p show msedge -s, -H
+python wapctl p stop msedge -y
 python wapctl pkg remove paint
 
 python wapctl svc

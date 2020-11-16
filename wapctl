@@ -47,7 +47,7 @@ class PSArray:
         self.nextline = line
         return retval
 
-    def build(self, cmd, name_key=None, name_target=None):
+    def build(self, cmd, name_key=None, name_target=None, flag_exact=False):
         self.stream = None
         self.nextline = None
 
@@ -79,8 +79,12 @@ class PSArray:
                     if name_key_u is None or name_target_u is None:
                         all_list.append(item_alist)
                     else:
-                        if name_target_u in item_alist[name_key_u].upper():
-                            all_list.append(item_alist)
+                        if flag_exact:
+                            if name_target == item_alist[name_key_u]:
+                                all_list.append(item_alist)
+                        else:
+                            if name_target_u in item_alist[name_key_u].upper():
+                                all_list.append(item_alist)
                     item_alist = {}
             line = self.readline()
 
@@ -88,8 +92,12 @@ class PSArray:
             if name_key_u is None or name_target_u is None:
                 all_list.append(item_alist)
             else:
-                if name_target_u in item_alist[name_key_u].upper():
-                    all_list.append(item_alist)
+                if flag_exact:
+                    if name_target == item_alist[name_key_u]:
+                        all_list.append(item_alist)
+                else:
+                    if name_target_u in item_alist[name_key_u].upper():
+                        all_list.append(item_alist)
             item_alist = {}
 
         if name_key_u is not None:
@@ -123,17 +131,19 @@ class Mode:
     op_name_list = ["LIST", "SHOW", "START", "STOP", "REMOVE"]
 
     mode_list = None
-    target_u = None
+    target = None
     separator = None
+    flag_exact = False
     flag_yes = False
     flag_header = False
 
     @classmethod
-    def createModeList(cls, target, sep, flag_yes=False, flag_header=False):
+    def createModeList(cls, target, sep, flag_exact=False, flag_yes=False, flag_header=False):
         cls.mode_list = [Process(), Application(), Installed(), Package(), Service(), Startup()]
         if target is not None:
-            cls.target_u = target.upper()
+            cls.target = target
         cls.separator = sep
+        cls.flag_exact = flag_exact
         cls.flag_yes = flag_yes
         cls.flag_header = flag_header
         return cls.mode_list
@@ -150,7 +160,7 @@ class Mode:
     def confirmAllTargets(self):
         if self.flag_yes:
             return True
-        if self.target_u is None:
+        if self.target is None:
             return input("All targets, ok? [y/N] ").strip() == "y"
 
     def confirm(self, op_name, name, value, no_by_default = False):
@@ -200,7 +210,7 @@ class Process(Mode):
 
     def prepareObjectList(self):
         cmd = "get-process | select id, processname"
-        return PSArray().build(cmd, self.name_key_u, self.target_u)
+        return PSArray().build(cmd, self.name_key_u, self.target, self.flag_exact)
 
     def preparePropertiesList(self, olist):
         sep = ""
@@ -240,7 +250,7 @@ class Application(Mode):
 
     def prepareObjectList(self):
         cmd = "(new-object -com shell.application).namespace(\\\"shell:appsfolder\\\").items() | select-object name, path"
-        return PSArray().build(cmd, self.name_key_u, self.target_u)
+        return PSArray().build(cmd, self.name_key_u, self.target, self.flag_exact)
 
     def doList(self, o):
         print(o.get("NAME"))
@@ -270,7 +280,7 @@ class Installed(Mode):
 
     def prepareObjectList(self):
         cmd = "get-item (\\\"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\\\", \\\"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\\\", \\\"HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\\\") |%{ \$k = \$_; \$k.getvalue(\\\"UninstallString\\\") |% { if (\$_ -ne \$null) { [pscustomobject]@{ key = \$k.pspath; name = \$k.getvalue(\\\"DisplayName\\\"); version = \$k.getvalue(\\\"DisplayVersion\\\"); publisher = \$k.getvalue(\\\"Publisher\\\"); uninstall = \$_ }}}}"
-        return PSArray().build(cmd, self.name_key_u, self.target_u)
+        return PSArray().build(cmd, self.name_key_u, self.target, self.flag_exact)
 
     def doList(self, o):
         if len(o.get("NAME")) > 0:
@@ -302,7 +312,7 @@ class Package(Mode):
 
     def prepareObjectList(self):
         cmd = "get-appxpackage *"
-        return PSArray().build(cmd, self.name_key_u, self.target_u)
+        return PSArray().build(cmd, self.name_key_u, self.target, self.flag_exact)
 
     def preparePropertiesList(self, olist):
         sep = ""
@@ -354,7 +364,7 @@ class Service(Mode):
 
     def prepareObjectList(self):
         cmd = "get-service | select-object name, displayname"
-        return PSArray().build(cmd, self.name_key_u, self.target_u)
+        return PSArray().build(cmd, self.name_key_u, self.target, self.flag_exact)
 
     def preparePropertiesList(self, olist):
         sep = ""
@@ -401,7 +411,7 @@ class Startup(Mode):
 
     def prepareObjectList(self):
         cmd = "\$r = @(); \$ns = \\\"\\\\Software\\\\\\\"; \$nw = \\\"Microsoft\\\\Windows\\\\CurrentVersion\\\\\\\"; \$nr = \$nw + \\\"Run\\\"; \$ne = \\\":\\\" + \$ns + \$nw + \\\"Explorer\\\\StartupApproved\\\\*\\\"; \$nm = \\\"HKLM:\\\" + \$ns; \$nc = \\\"HKCU:\\\" + \$ns; \$l = @(\\\"User\\\", \\\"System\\\", \\\"WoW\\\"); \$e = @(\$nc, \$nm, (\$nm + \\\"Wow6432Node\\\\\\\")); \$f = @(\\\"\\\", \\\"Common \\\"); foreach (\$i in 0..2) { \$k = get-item (\$e[\$i] + \$nr); \$k.getvaluenames() |%{ \$r += [pscustomobject]@{ l = \\\"Run:\\\" + \$l[\$i]; n = \$_; c = \$k.getvalue(\$_) }}}; foreach (\$i in 0..1) { ((new-object -com shell.application).namespace(\\\"shell:\\\" + \$f[\$i] + \\\"Startup\\\").items() |%{ \$r += [pscustomobject]@{ l = \\\"Startup:\\\" + \$l[\$i]; n = \$_.name; c = \$_.path }})}; \$x = get-itemproperty (\\\"HKLM\\\" + \$ne), (\\\"HKCU\\\" + \$ne); \$nuwp = (\$r |? c -ne \\\"\\\" |%{ \$o = [pscustomobject]@{ location = \$_.l; name = \$_.n; disabled = 0; command = \$_.c; path = \$null }; \$x |%{ \$p = \$_.PSPath; \$_ | get-member -type noteproperty |? name -eq \$o.name |%{ \$v = get-itempropertyvalue \$p -name \$o.name; \$o.path = \$p; \$o.disabled = \$v[0] -band 1 }}; \$o }); \$uwp = (get-appxpackage |% { \$x = \$_; \$t = (get-appxpackagemanifest \$_).package.applications.application.extensions.extension |? category -like \\\"*.startuptask\\\"; if (\$t -ne \$null) { \$p = \$nc + \\\"Classes\\\\Local Settings\\\" + \$ns + \$nw + \\\"AppModel\\\\SystemAppData\\\\\\\" + \$x.packagefamilyname + \\\"\\\\\\\" + \$t.startuptask.taskid; \$s = (get-item \$p).getvalue(\\\"state\\\"); \$o = [pscustomobject]@{ location = \\\"UWP\\\"; name = \$x.name; disabled = \$s -band 1; command = \$x.installlocation + \\\"\\\\\\\" + \$t.executable; path = \$p }; \$o }}); \$nuwp+\$uwp"
-        object_list = PSArray().build(cmd, self.name_key_u, self.target_u)
+        object_list = PSArray().build(cmd, self.name_key_u, self.target, self.flag_exact)
         return sorted(object_list, key=lambda x:x["NAME"].upper())
 
     def state(self, o):
@@ -486,6 +496,7 @@ run|startup   Startup programs in Shell startup, 'Run' registry and UWP""")
     parser.add_argument("op", nargs="?", default=Mode.op_name_list[Mode.OpIndex.LIST], help="list|show|start|stop|remove")
     parser.add_argument("target", nargs="?", default=None, help="target name")
     parser.add_argument("-s", "--separator", nargs=1, default=" ", help="field separator for output")
+    parser.add_argument("-e", "--exact", action="store_true", help="only exact match")
     parser.add_argument("-y", "--yes", action="store_true", help="assume yes")
     parser.add_argument("-H", "--print-header", action="store_true", help="print header")
     args = parser.parse_args()
@@ -510,7 +521,7 @@ run|startup   Startup programs in Shell startup, 'Run' registry and UWP""")
         parser.print_help(file=sys.stderr)
         exit(1)
 
-    mode_list = Mode.createModeList(args.target, args.separator[0], args.yes, args.print_header)
+    mode_list = Mode.createModeList(args.target, args.separator[0], args.exact, args.yes, args.print_header)
     if mode_list[mode_no].op(op_no) == False:
         exit(1)
 

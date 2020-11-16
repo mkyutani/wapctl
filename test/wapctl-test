@@ -26,9 +26,9 @@ which ./wapctl
 
 ./wapctl pkg
 ./wapctl pkg list wap-name-which-does-not-exist
-./wapctl pkg list microsoft.microsoftedge
-./wapctl pkg show microsoft.microsoftedge -s, -H
-./wapctl pkg start microsoft.microsoftedge -y
+./wapctl pkg list Microsoft.MicrosoftEdge
+./wapctl pkg show Microsoft.MicrosoftEdge -e -s, -H
+./wapctl pkg start Microsoft.MicrosoftEdge -e -y
 ./wapctl p show msedge -s, -H
 ./wapctl p stop msedge -y
 ./wapctl pkg remove paint

@@ -1,55 +1,56 @@
 # sh -x ./wapctl-test
 
 which ./wapctl
-./wapctl --help
+./wapctl; echo Return-code: $?
+./wapctl --help; echo Return-code: $?
 
-./wapctl pkg start calc -y
-./wapctl p
-./wapctl p list wap-name-which-does-not-exist
-./wapctl p list calc
-./wapctl p show calc -s, -H
-./wapctl p stop calculator -y
+./wapctl pkg start calc -y; echo Return-code: $?
+./wapctl p; echo Return-code: $?
+./wapctl p list wap-name-which-does-not-exist; echo Return-code: $?
+./wapctl p list calc; echo Return-code: $?
+./wapctl p show calc -s, -H; echo Return-code: $?
+./wapctl p stop calculator -y; echo Return-code: $?
 
-./wapctl a
-./wapctl a list wap-name-which-does-not-exist
-./wapctl a list 電卓
-./wapctl a show 電卓 -s, -H
-./wapctl a start 電卓 -y
-./wapctl p show calculator -s, -H
-./wapctl p stop calculator -y
+./wapctl a; echo Return-code: $?
+./wapctl a list wap-name-which-does-not-exist; echo Return-code: $?
+./wapctl a list 電卓; echo Return-code: $?
+./wapctl a show 電卓 -s, -H; echo Return-code: $?
+./wapctl a start 電卓 -y; echo Return-code: $?
+./wapctl p show calculator -s, -H; echo Return-code: $?
+./wapctl p stop calculator -y; echo Return-code: $?
 
-./wapctl ins
-./wapctl ins list wap-name-which-does-not-exist
-./wapctl ins list zoom
-./wapctl ins show zoom -s, -H
-./wapctl ins remove zoom
+./wapctl ins; echo Return-code: $?
+./wapctl ins list wap-name-which-does-not-exist; echo Return-code: $?
+./wapctl ins list zoom; echo Return-code: $?
+./wapctl ins show zoom -s, -H; echo Return-code: $?
+./wapctl ins remove zoom; echo Return-code: $?
 
-./wapctl pkg
-./wapctl pkg list wap-name-which-does-not-exist
-./wapctl pkg list Microsoft.MicrosoftEdge
-./wapctl pkg show Microsoft.MicrosoftEdge -e -s, -H
-./wapctl pkg start Microsoft.MicrosoftEdge -e -y
-./wapctl p show msedge -s, -H
-./wapctl p stop msedge -y
-./wapctl pkg remove paint
+./wapctl pkg; echo Return-code: $?
+./wapctl pkg list wap-name-which-does-not-exist; echo Return-code: $?
+./wapctl pkg list Microsoft.MicrosoftEdge; echo Return-code: $?
+./wapctl pkg show Microsoft.MicrosoftEdge -e -s, -H; echo Return-code: $?
+./wapctl pkg start Microsoft.MicrosoftEdge -e -y; echo Return-code: $?
+./wapctl p show msedge -s, -H; echo Return-code: $?
+./wapctl p stop msedge -y; echo Return-code: $?
+./wapctl pkg remove paint; echo Return-code: $?
 
-./wapctl svc
-./wapctl svc list wap-name-which-does-not-exist
-./wapctl svc list docker
-./wapctl svc show docker -s, -H
-./wapctl svc stop docker -y
-./wapctl svc show docker -s, -H
-./wapctl svc start docker -y
-./wapctl svc show docker -s, -H
+./wapctl svc; echo Return-code: $?
+./wapctl svc list wap-name-which-does-not-exist; echo Return-code: $?
+./wapctl svc list docker; echo Return-code: $?
+./wapctl svc show docker -s, -H; echo Return-code: $?
+./wapctl svc stop docker -y; echo Return-code: $?
+./wapctl svc show docker -s, -H; echo Return-code: $?
+./wapctl svc start docker -y; echo Return-code: $?
+./wapctl svc show docker -s, -H; echo Return-code: $?
 
-./wapctl run
-./wapctl run list wap-name-which-does-not-exist
-./wapctl run list docker
-./wapctl run show docker -s, -H
-./wapctl run stop docker -y
-./wapctl run show docker -s, -H
-./wapctl run start docker -y
-./wapctl run show docker -s, -H
+./wapctl run; echo Return-code: $?
+./wapctl run list wap-name-which-does-not-exist; echo Return-code: $?
+./wapctl run list docker; echo Return-code: $?
+./wapctl run show docker -s, -H; echo Return-code: $?
+./wapctl run stop docker -y; echo Return-code: $?
+./wapctl run show docker -s, -H; echo Return-code: $?
+./wapctl run start docker -y; echo Return-code: $?
+./wapctl run show docker -s, -H; echo Return-code: $?
 
 
 

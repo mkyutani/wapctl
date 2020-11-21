@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import chardet
+import errno
 import io
 import os
 import re
@@ -177,26 +178,33 @@ class Mode:
 
     def op(self, op_no):
         if op_no >= Mode.OpIndex.MAX:
-            return False
+            return errno.ENOENT
         if self.object_func_list[op_no] is None and self.property_func_list[op_no] is None:
-            return False
+            return errno.ENOENT
         if op_no != Mode.OpIndex.LIST and self.confirmAllTargets() == False:
-            return False
+            return errno.ENOENT
+        
+        flag_dirty = False
         object_list = self.prepareObjectList()
         if len(object_list) > 0:
             if self.object_func_list[op_no] is not None:
                 if self.flag_header and self.header_func_list[op_no] is not None:
                     self.header_func_list[op_no]()
                 for o in object_list:
-                    self.object_func_list[op_no](o)
+                    if self.object_func_list[op_no](o) == True:
+                        flag_dirty = True
             if self.property_func_list[op_no] is not None:
                 props_list = self.preparePropertiesList(object_list)
                 if len(props_list) > 0:
                     if self.flag_header and self.header_func_list[op_no] is not None:
                         self.header_func_list[op_no]()
                     for p in props_list:
-                        self.property_func_list[op_no](p)
-        return True
+                        if self.property_func_list[op_no](p) == True:
+                            flag_dirty = True
+        if flag_dirty == False:
+            return errno.ENOENT
+        else:
+            return 0
 
 class Process(Mode):
 
@@ -223,6 +231,7 @@ class Process(Mode):
 
     def doList(self, o):
         print(o.get("PROCESSNAME"))
+        return True
 
     def doShow(self, p):
         domain = p.get("DOMAIN")
@@ -230,10 +239,14 @@ class Process(Mode):
         if domain is not None:
             owner = domain + "\\" + owner
         print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}".format(self.sep(), p.get("PROCESSNAME"), p.get("ID"), p.get("PRIORITY") or "", owner, p.get("PRODUCT") or "", p.get("PRODUCTVERSION") or "", p.get("DESCRIPTION") or "", p.get("COMPANY") or "", p.get("PATH") or "", p.get("CMD") or ""))
+        return True
 
     def doStop(self, p):
+        flag_dirty = False
         if self.confirm("Stop", p.get("PROCESSNAME"), p.get("ID")):
             Shell.ps("stop-process -id " + p.get("ID"))
+            flag_dirty = True
+        return flag_dirty
 
     def doPrintHeader(self):
         print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}".format(self.sep(), "name", "pid", "priority", "owner", "product", "version", "description", "company", "path", "command"))
@@ -254,16 +267,21 @@ class Application(Mode):
 
     def doList(self, o):
         print(o.get("NAME"))
+        return True
 
     def doShow(self, o):
         print("{1}{0}{2}".format(self.sep(), o.get("NAME"), o.get("PATH")))
+        return True
 
     def doStart(self, o):
+        flag_dirty = False
         if o.get("NAME") is None:
             self.warningNoCommandCandidates(o.get("NAME"))
         else:
             if self.confirm("Run", o.get("NAME"), o.get("PATH")):
                 Shell.ps("start-process \\\"shell:appsfolder\\" + o.get("PATH") + "\\\"")
+                flag_dirty = True
+        return flag_dirty
 
     def doPrintHeader(self):
         print("{1}{0}{2}".format(self.sep(), "name", "path"))
@@ -283,18 +301,25 @@ class Installed(Mode):
         return PSArray().build(cmd, self.name_key_u, self.target, self.flag_exact)
 
     def doList(self, o):
+        flag_dirty = False
         if len(o.get("NAME")) > 0:
             print(o.get("NAME"))
+            flag_dirty = True
+        return flag_dirty
 
     def doShow(self, o):
         print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), o.get("NAME") or "", o.get("VERSION") or "", o.get("PUBLISHER") or "", o.get("UNINSTALL") or ""))
+        return True
 
     def doRemove(self, o):
+        flag_dirty = False
         if o.get("UNINSTALL") is None:
             self.warningNoCommandCandidates(o.get("NAME"))
         else:
             if self.confirm("Uninstall", o.get("NAME"), o.get("UNINSTALL"), no_by_default=True):
                 Shell.traditional(o.get("UNINSTALL"))
+                flag_dirty = True
+        return flag_dirty
 
     def doPrintHeader(self):
         print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), "name", "version", "publisher", "uninstall"))
@@ -325,11 +350,14 @@ class Package(Mode):
 
     def doList(self, o):
         print(o.get("NAME"))
+        return True
 
     def doShow(self, p):
         print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), p.get("NAME"), p.get("PACKAGEFULLNAME"), p.get("PUBLISHERDISPLAYNAME") or "", p.get("EXECUTABLE") or ""))
+        return True
 
     def doStart(self, p):
+        flag_dirty = False
         if p.get("PACKAGEFAMILYNAME") is None:
             self.warningNoCommandCandidates(p.get("NAME"))
         else:
@@ -340,13 +368,18 @@ class Package(Mode):
                     path = p.get("PACKAGEFAMILYNAME") + "!" + x.get("ID")
                     if self.confirm("Start", p.get("NAME"), path):
                         Shell.ps("start-process \\\"shell:appsfolder\\" + path + "\\\"")
+                        flag_dirty = True
+        return flag_dirty
 
     def doRemove(self, o):
+        flag_dirty = False
         if o.get("PACKAGEFULLNAME") is None:
             self.warningNoCommandCandidates(o.get("NAME"))
         else:
             if self.confirm("Uninstall", o.get("NAME"), o.get("PACKAGEFULLNAME"), no_by_default=True):
                 Shell.ps("remove-appxpackage \\\"" + o.get("PACKAGEFULLNAME") + "\\\"")
+                flag_dirty = True
+        return flag_dirty
 
     def doPrintHeader(self):
         print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), "name", "package", "publisher", "executable"))
@@ -377,23 +410,31 @@ class Service(Mode):
 
     def doList(self, o):
         print(o.get("DISPLAYNAME"))
+        return True
 
     def doShow(self, p):
         print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}".format(self.sep(), p.get("DISPLAYNAME"), p.get("NAME") or "", p.get("STARTMODE") or "", p.get("STATE") or "", p.get("PROCESSID") or "", p.get("PATHNAME") or ""))
+        return True
 
     def doStart(self, p):
+        flag_dirty = False
         if p.get("NAME") is None:
             self.warningNoCommandCandidates(p.get("DISPLAYNAME"))
         else:
             if self.confirm("Start", p.get("DISPLAYNAME"), p.get("NAME")):
                 Shell.ps("(get-wmiobject win32_service | where-object name -eq \"" + p.get("NAME") + "\").startservice()")
+                flag_dirty = True
+        return flag_dirty
 
     def doStop(self, p):
+        flag_dirty = False
         if p.get("NAME") is None:
             self.warningNoCommandCandidates(p.get("DISPLAYNAME"))
         else:
             if self.confirm("Stop", p.get("DISPLAYNAME"), p.get("NAME")):
                 Shell.ps("(get-wmiobject win32_service | where-object name -eq \"" + p.get("NAME") + "\").stopservice()")
+                flag_dirty = True
+        return flag_dirty
 
     def doPrintHeader(self):
         print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}".format(self.sep(), "name", "internal", "mode", "state", "pid", "path"))
@@ -442,35 +483,47 @@ class Startup(Mode):
 
     def doList(self, o):
         print(o.get("NAME"))
+        return True
 
     def doShow(self, o):
         print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), o.get("NAME") or "", o.get("LOCATION") or "", self.state(o) or "", o.get("COMMAND") or ""))
+        return True
 
     def doStart(self, o):
+        flag_dirty = False
         if o.get("NAME") is None:
             self.warningNoCommandCandidates(o.get("NAME"))
         else:
             if self.confirm("Enable", o.get("NAME"), self.state(o)):
                 if self.taskType(o) == "UWP":
                     Shell.ps("set-itemproperty -path \\\"" + o.get("PATH") + "\\\" -name state -value 2")
+                    flag_dirty = True
                 else:
                     if len(o.get("PATH")) > 0:
                         Shell.ps("\$k = \\\"" + o.get("PATH") + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; \$v = get-itempropertyvalue \$k -name \$n; \$v[0] = \$v[0] -band 0xfe; set-itemproperty \$k -name \$n -value \$v")
+                        flag_dirty = True
                     else:
                         Shell.ps("\$k = \\\"" + self.buildStatePath(o) + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; set-itemproperty \$k -name \$n -value ([byte[]]@(2,0,0,0,0,0,0,0,0,0,0,0))")
+                        flag_dirty = True
+        return flag_dirty
 
     def doStop(self, o):
+        flag_dirty = False
         if o.get("NAME") is None:
             self.warningNoCommandCandidates(o.get("NAME"))
         else:
             if self.confirm("Disable", o.get("NAME"), self.state(o)):
                 if self.taskType(o) == "UWP":
                     Shell.ps("set-itemproperty -path \\\"" + o.get("PATH") + "\\\" -name state -value 1")
+                    flag_dirty = True
                 else:
                     if len(o.get("PATH")) > 0:
                         Shell.ps("\$k = \\\"" + o.get("PATH") + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; \$v = get-itempropertyvalue \$k -name \$n; \$v[0] = \$v[0] -bor 1; set-itemproperty \$k -name \$n -value \$v")
+                        flag_dirty = True
                     else:
                         Shell.ps("\$k = \\\"" + self.buildStatePath(o) + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; set-itemproperty \$k -name \$n -value ([byte[]]@(1,0,0,0,0,0,0,0,0,0,0,0))")
+                        flag_dirty = True
+        return flag_dirty
 
     def doPrintHeader(self):
         print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), "name", "location", "state", "command"))
@@ -519,10 +572,9 @@ run|startup   Startup programs in Shell startup, 'Run' registry and UWP""")
 
     if mode_no == Mode.Index.NONE or op_no == Mode.OpIndex.NONE:
         parser.print_help(file=sys.stderr)
-        exit(1)
+        exit(errno.ENOENT)
 
     mode_list = Mode.createModeList(args.target, args.separator[0], args.exact, args.yes, args.print_header)
-    if mode_list[mode_no].op(op_no) == False:
-        exit(1)
+    ret_code =  mode_list[mode_no].op(op_no)
 
-    exit(0)
+    exit(ret_code)

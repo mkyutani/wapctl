@@ -247,6 +247,12 @@ Disable Docker Desktop (enabled), ok? [Y/n]
 * --print-header
   * Print header
 
+## RETURN_CODE
+
+Wapctl returns 0 on success, and non-zero on error.
+
+* ENOENT: Found no objects.
+
 ## Contributing
 Pull requests are welcome.
 

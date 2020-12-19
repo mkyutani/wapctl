@@ -15,8 +15,8 @@ from subprocess import PIPE, DEVNULL
 class Shell:
 
     def traditional(cmd):
-        cmdline = "cmd.exe /c \"" + cmd + "\""
-        subprocess.Popen(cmdline, shell=True, stdout=DEVNULL, stderr=DEVNULL)
+        cmdline = "cmd.exe /c " + cmd
+        subprocess.Popen(cmdline, shell=True, stdout=DEVNULL)
 
     def ps(cmd):
         cmdline = "powershell.exe -command \"& {" + cmd + "}\""

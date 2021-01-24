@@ -226,7 +226,7 @@ class Process(Mode):
         for o in olist:
             idlist = idlist + sep + o.get("ID")
             sep = ","
-        cmd = "get-process -id " + idlist + " |%{ \$p = \$_; \$x = \$_.id; get-ciminstance -classname Win32_Process -namespace root\\cimv2 -filter \\\"processid = \$x\\\" |%{ \$u = (invoke-cimmethod -inputobject \$_ -methodname getowner); [pscustomobject]@{ id = \$p.id; processname = \$p.processname; domain = \$u.domain; user = \$u.user; path = \$_.executablepath; cmd = \$_.commandline; priority = \$_.priority; product = \$p.product; productversion = \$p.productversion; company = \$p.company; description = \$p.description }}}"
+        cmd = "get-process -id " + idlist + " -erroraction silentlycontinue |%{ \$p = \$_; \$x = \$_.id; get-ciminstance -classname Win32_Process -namespace root\\cimv2 -filter \\\"processid = \$x\\\" |%{ \$u = (invoke-cimmethod -inputobject \$_ -methodname getowner); [pscustomobject]@{ id = \$p.id; processname = \$p.processname; domain = \$u.domain; user = \$u.user; path = \$_.executablepath; cmd = \$_.commandline; priority = \$_.priority; product = \$p.product; productversion = \$p.productversion; company = \$p.company; description = \$p.description }}}"
         return PSArray().build(cmd, self.name_key_u)
 
     def doList(self, o):

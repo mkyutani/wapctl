@@ -1,6 +1,6 @@
 # wapctl
 
-wapctl - Control Windows applications under Windows Subsystem for Linux (WSL)
+wapctl - Command line interface to control Windows applications
 
 ## Installation
 
@@ -35,12 +35,10 @@ C:\> pip install chardet
 
 ## Usage
 
-The basic command interface of wapctl is like `wapctl mode [op [target]]`.
-You must ONE `Mode` parameter which is one of `process` (abbrev. `p`), `application` (`a`), `installed` (`ins`), `package` (`pkg`), `service` (`svc`), and `startup` (`run`).
-`Op` is one of `list`, `show`, `start`, `stop`, and `remove`. Wapctl assumes `list` if you give no `op` parameters.
-You may also give the `target` parameter which specifies the complete or partial name of targets, case insensitively.
+The basic command interface of wapctl is like `wapctl target`, which search target from various location, i.e. Shell:AppsFolder, Windows Store packages, registry 'uninstall', shell startups, Win32 services, and running processes.  If you give no targets to wapctl, it assumes targets are all found items.
+You can specify modes and operations. Mode options mean locations to search targets and operation options actions to found targets.  Operations is one of `list`, `info`, `start`, `stop`, and `remove`. Wapctl assumes `list` if you give no operation options.
 
-You cannot show some information and control targets (eg. Win32 services) without administrator privileges.  Let you become an account with administrator privileges and run-as-administrator WSL bash or Command Prompt.
+You cannot show some information and control targets (eg. Win32 services) without administrator privileges.  Let you be an account with administrator privileges and execute wapctl on run-as-administrator WSL bash or Command Prompt.
 
 ### Running processes
 
@@ -50,28 +48,28 @@ You can list, show information and stop the running processes with the complete 
 
 
 ```bash
-$ wapctl p list
+$ wapctl --process --list
 ...
-$ wapctl p list calc
-Calculator
+$ wapctl --process --list calc
+process Calculator
 ```
 
-* Show information of the running processes. Output columns mean (1)process name, (2)PID, (3)priority, (4)owner, (5)product name,(6)version, (7)description, (8)company name, (9)executable path, (10)command line, respectively.  You can change the column separator with option '-s'.
+* Show information of the running processes. Output columns mean (1)mode ("process"), (2)process name, (3)PID, (4)priority, (5)owner, (6)product name, (7)version, (8)description, (9)company name, (10)executable path, (11)command line, respectively.  You can change the column separator with option '-s'.
 
 
 ```bash
-$ wapctl p show calc
-Calculator 19192 8 DOMAIN\account Microsoft Calculator 10.2009.4.0 Calculator.exe Microsoft Corporation C:\Program Files\WindowsApps\Microsoft.WindowsCalculator_10.2009.4.0_x64__8wekyb3d8bbwe\Calculator.exe "C:\Program Files\WindowsApps\Microsoft.WindowsCalculator_10.2009.4.0_x64__8wekyb3d8bbwe\Calculator.exe" -ServerName:App.AppXsm3pg4n7er43kdh1qp4e79f1j7am68r8.mca
+$ wapctl --process --info calc
+application Calculator 19192 8 DOMAIN\account Microsoft Calculator 10.2009.4.0 Calculator.exe Microsoft Corporation C:\Program Files\WindowsApps\Microsoft.WindowsCalculator_10.2009.4.0_x64__8wekyb3d8bbwe\Calculator.exe "C:\Program Files\WindowsApps\Microsoft.WindowsCalculator_10.2009.4.0_x64__8wekyb3d8bbwe\Calculator.exe" -ServerName:App.AppXsm3pg4n7er43kdh1qp4e79f1j7am68r8.mca
 
-$ wapctl p show calc -s, | cut -d, -f 10
+$ wapctl --process --info calc -s, | cut -d, -f 11
 "C:\Program Files\WindowsApps\Microsoft.WindowsCalculator_10.2009.4.0_x64__8wekyb3d8bbwe\Calculator.exe" -ServerName:App.AppXsm3pg4n7er43kdh1qp4e79f1j7am68r8.mca
 ```
 
 * Stop the running processes.
 
 ```bash
-$ wapctl p stop calc
-Stop Calculator (19192), ok? [Y/n]
+$ wapctl --process --stop calc
+Stop Calculator process (19192), ok? [Y/n]
 ```
 
 ### Applications programs in Shell:AppsFolder
@@ -82,24 +80,24 @@ You can list, show information and start the application programs in 'Shell:Apps
 
 
 ```bash
-$ wapctl a list
+$ wapctl --application --list
 ...
-$ wapctl a list zoom
-Zoom
+$ wapctl --application --list zoom
+application Zoom
 ```
 
-* Show information of the application programs. Output columns are mean (1)name and (2)path to start.
+* Show information of the application programs. Output columns are mean (1)mode ("application"), (2)name and (3)path to start.
 
 ```bash
-$ wapctl a show zoom
-Zoom zoom.us.Zoom Video Meetings
+$ wapctl --applicatoin --info zoom
+application Zoom zoom.us.Zoom Video Meetings
 ```
 
 * Start the application program.
 
 ```bash
-$ wapctl a start zoom
-Run Zoom (zoom.us.Zoom Video Meetings), ok? [Y/n]
+$ wapctl --application --start zoom
+Run Zoom application (zoom.us.Zoom Video Meetings), ok? [Y/n]
 ```
 
 ### Installed applications in 'Uninstall' registry
@@ -110,24 +108,24 @@ You can list, show information, and remove (uninstall) the installed application
 
 
 ```bash
-$ wapctl ins list
+$ wapctl --installed --list
 ...
-$ wapctl ins list slack
-Slack
+$ wapctl --installed --list slack
+installed Slack
 ```
 
-* Show information of the installed applications. Output columns mean (1)application name, (2)application version, (3)publisher name, and (4)uninstall command, respectively.
+* Show information of the installed applications. Output columns mean (1)mode ("installed", (2)application name, (3)application version, (4)publisher name, and (5)uninstall command, respectively.
 
 ```bash
-$ wapctl ins show slack
-Slack 4.9.0 Slack Technologies Inc. "C:\Users\account\AppData\Local\slack\Update.exe" --uninstall
+$ wapctl --installed --info slack
+installed Slack 4.9.0 Slack Technologies Inc. "C:\Users\account\AppData\Local\slack\Update.exe" --uninstall
 ```
 
 * Uninstall the installed applications.
 
 ```bash
 $ wapctl ins remove slack
-Uninstall Slack ("C:\Users\account\AppData\Local\slack\Update.exe" --uninstall), ok? [y/N] n
+Uninstall Slack installed ("C:\Users\account\AppData\Local\slack\Update.exe" --uninstall), ok? [y/N] n
 ```
 
 ### Packages registered in Windows Store
@@ -137,31 +135,31 @@ You can list, show information, start and remove the packages registered in Wind
 * List the Windows Store packages.
 
 ```bash
-$ wapctl pkg list
+$ wapctl --package --list
 ...
-$ wapctl pkg list paint
-Microsoft.MSPaint
+$ wapctl --package --list paint
+package Microsoft.MSPaint
 ```
 
-* Show information of the Windows Store packages. Output columns mean (1)package name, (2)package full name, (3)publisher, (4)executable, respectively.
+* Show information of the Windows Store packages. Output columns mean (1)mode ("package", (2)package name, (3)package full name, (4)publisher, (5)executable, respectively.
 
 ```bash
-$ wapctl pkg show paint
-Microsoft.MSPaint Microsoft.MSPaint_6.2004.20027.0_x64__8wekyb3d8bbwe Microsoft Corporation PaintStudio.View.exe
+$ wapctl --package --info paint
+package Microsoft.MSPaint Microsoft.MSPaint_6.2004.20027.0_x64__8wekyb3d8bbwe Microsoft Corporation PaintStudio.View.exe
 ```
 
 * Start the Windows Store packages.
 
 ```bash
-$ wapctl pkg start paint
-Start Microsoft.MSPaint (Microsoft.MSPaint_8wekyb3d8bbwe), ok? [Y/n] n
+$ wapctl --package --start paint
+Start Microsoft.MSPaint package (Microsoft.MSPaint_8wekyb3d8bbwe), ok? [Y/n] n
 ```
 
 * Uninstall the Windows Store packages.
 
 ```bash
-$ wapctl pkg remove paint
-Uninstall Microsoft.MSPaint (Microsoft.MSPaint_6.2004.20027.0_x64__8wekyb3d8bbwe), ok? [y/N]
+$ wapctl --package --remove paint
+Uninstall Microsoft.MSPaint package (Microsoft.MSPaint_6.2004.20027.0_x64__8wekyb3d8bbwe), ok? [y/N] n
 ```
 
 ### Win32 Services
@@ -171,31 +169,31 @@ You can list, show information, start and stop the Win32 services.
 * List the Win32 services.
 
 ```bash
-$ wapctl svc list
+$ wapctl --service --list
 ...
-$ wapctl svc list search
-Windows Search
+$ wapctl --service --list search
+service Windows Search
 ```
 
-* Show information of the Win32 services. Output columns mean (1)service name, (2)internal name, (3)start mode, (4)current state, (5)PID, (6)path, respectively.
+* Show information of the Win32 services. Output columns mean (1)mode("service"), (2)service name, (3)internal name, (4)start mode, (5)current state, (6)PID, (7)path, respectively.
 
 ```bash
-$ wapctl svc show search
-Windows Search WSearch Auto Running 3320 C:\WINDOWS\system32\SearchIndexer.exe /Embedding
+$ wapctl --service --info search
+service Windows Search WSearch Auto Running 3320 C:\WINDOWS\system32\SearchIndexer.exe /Embedding
 ```
 
 * Start the Win32 services.
 
 ```bash
-$ wapctl svc start search
-Start Windows Search (WSearch), ok? [Y/n]
+$ wapctl --service --start search
+Start Windows Search service (WSearch), ok? [Y/n]
 ```
 
 * Stop the Win32 services.
 
 ```bash
-$ wapctl svc stop search
-Stop Windows Search (WSearch), ok? [Y/n]
+$ wapctl --service --stop search
+Stop Windows Search service (WSearch), ok? [Y/n]
 ```
 
 ### Startup programs in Shell startup, 'Run' registry and UWP
@@ -205,47 +203,83 @@ You can list, show information, start and remove the startup programs in Shell s
 * List the startup programs.
 
 ```bash
-$ wapctl run list
+$ wapctl --startup --list
 ...
-$ wapctl run list docker
-Docker Desktop
+$ wapctl --startup --list docker
+startup Docker Desktop
 ```
 
-* Show information of the startup programs. Output columns mean (1)name, (2)type, and (3)state.
+* Show information of the startup programs. Output columns mean (1)mode("startup"), (2)name, (3)type, (4)state, and (5)command line.
 
 ```bash
-$ wapctl run show docker
-Docker Desktop Run:User enabled
+$ wapctl --startup --info docker
+startup Docker Desktop Run:User enabled C:\Program Files\Docker\Docker\Docker Desktop.exe
 ```
 
 * Enable the startup programs.  This operation DOESN'T START ANY STOPPED TASKS but only set/unset flags in registry.
 
 ```bash
-$ wapctl run start docker
-Enable Docker Desktop (disabled), ok? [Y/n]
+$ wapctl --startup --start docker
+Enable Docker Desktop startup (disabled), ok? [Y/n]
 ```
 
 * Disable the startup programs.  This operation DOESN'T STOP ANY RUNNING TASKS but only set/unset flags in registry.
 
 ```bash
-$ wapctl run stop docker
-Disable Docker Desktop (enabled), ok? [Y/n]
+$ wapctl --startup --stop docker
+Disable Docker Desktop startup (enabled), ok? [Y/n]
 ```
 
 ## Options
 
 * -h
 * --help
-  * Show help message
-* -s SEPARATOR
-* --separator SEPARATOR
-  * Field separator for output
-* -y
-* --yes
-  * Assume yes
+  * show this help message and exit
+* -a
+* --application
+  * mode: shell applications in 'Shell:AppsFolder'
+* -e
+* --exact
+  * only exact match
 * -H
 * --print-header
-  * Print header
+  * print header
+* -i
+* --info
+  * operation: info
+* -I
+* --installed
+  * mode: installed packages in 'Uninstall' registry
+* -l
+* --list
+  * operation: list
+* -p
+* --process
+  * mode: running processes
+* -P
+* --package
+  * mode: Windows Store packages (UWP)
+* -R
+* --startup
+  * mode: shell startups in shell startup folders, 'Run' registry and UWP configuration
+* -s SEPARATOR
+* --separator SEPARATOR
+  * field separator for output
+* -S
+* --service
+  * mode: Win32 services
+* -y
+* --yes
+  * assume yes
+* -z
+* --remove
+  * operation: remove
+* -0
+* --stop
+  * operation: stop
+* -1
+* --start
+  * operation: start
 
 ## RETURN_CODE
 

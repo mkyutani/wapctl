@@ -121,17 +121,12 @@ class Mode:
     class OpIndex(IntEnum):
         NONE = -1
         LIST = 0
-        SHOW = 1
+        INFO = 1
         START = 2
         STOP = 3
         REMOVE = 4
         MAX = 5
 
-    name_list = ["PROCESS", "APPLICATION", "INSTALLED", "PACKAGE", "SERVICE", "STARTUP"]
-    name_abbrev_list = ["P", "A", "INS", "PKG", "SVC", "RUN"]
-    op_name_list = ["LIST", "SHOW", "START", "STOP", "REMOVE"]
-
-    mode_list = None
     target = None
     separator = None
     flag_exact = False
@@ -139,21 +134,29 @@ class Mode:
     flag_header = False
 
     @classmethod
-    def createModeList(cls, target, sep, flag_exact=False, flag_yes=False, flag_header=False):
-        cls.mode_list = [Process(), Application(), Installed(), Package(), Service(), Startup()]
+    def setTarget(cls, target):
         if target is not None:
             cls.target = target
+
+    @classmethod
+    def setSeparator(cls, sep):
         cls.separator = sep
+
+    @classmethod
+    def setFlags(cls, flag_exact=False, flag_yes=False, flag_header=False):
         cls.flag_exact = flag_exact
         cls.flag_yes = flag_yes
         cls.flag_header = flag_header
-        return cls.mode_list
-    
-    def __init__(self):
+
+    def __init__(self, name):
         self.object_func_list = [None] * Mode.OpIndex.MAX
         self.property_func_list = [None] * Mode.OpIndex.MAX
         self.header_func_list = [None] * Mode.OpIndex.MAX
         self.name_key_u = None
+        self.mode_name = name
+
+    def name(self):
+        return self.mode_name
 
     def sep(self):
         return self.separator
@@ -162,22 +165,23 @@ class Mode:
         if self.flag_yes:
             return True
         if self.target is None:
-            return input("All targets, ok? [y/N] ").strip() == "y"
+            message = "All {0} targets, ok?".format(self.name())
+            return input(message + " [y/N] ").strip() == "y"
 
     def confirm(self, op_name, name, value, no_by_default = False):
         if self.flag_yes:
             return True
-        message = "{} {} ({}), ok?".format(op_name, name, value)
+        message = "{1} {2} {0} ({3}), ok?".format(self.name(), op_name, name, value)
         if no_by_default == True:
             return input(message + " [y/N] ").strip() == "y"
         else:
             return input(message + " [Y/n] ").strip() != "n"
 
     def warningNoCommandCandidates(self, name):
-        print("{}: No command candidates found.".format(name), file=sys.stderr)
+        print("{1} {0}: No command candidates found.".format(self.name(), name), file=sys.stderr)
 
     def op(self, op_no):
-        if op_no >= Mode.OpIndex.MAX:
+        if op_no == Mode.OpIndex.NONE or op_no >= Mode.OpIndex.MAX:
             return errno.ENOENT
         if self.object_func_list[op_no] is None and self.property_func_list[op_no] is None:
             return errno.ENOENT
@@ -209,10 +213,10 @@ class Mode:
 class Process(Mode):
 
     def __init__(self):
-        super().__init__()
+        super().__init__("process")
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
-        self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
-        self.header_func_list[Mode.OpIndex.SHOW] = self.doPrintHeader
+        self.property_func_list[Mode.OpIndex.INFO] = self.doInfo
+        self.header_func_list[Mode.OpIndex.INFO] = self.doPrintHeader
         self.property_func_list[Mode.OpIndex.STOP] = self.doStop
         self.name_key_u = "PROCESSNAME"
 
@@ -230,15 +234,15 @@ class Process(Mode):
         return PSArray().build(cmd, self.name_key_u)
 
     def doList(self, o):
-        print(o.get("PROCESSNAME"))
+        print("{1}{0}{2}".format(self.sep(), self.name(), o.get("PROCESSNAME")))
         return True
 
-    def doShow(self, p):
+    def doInfo(self, p):
         domain = p.get("DOMAIN")
         owner = p.get("USER") or ""
         if domain is not None:
             owner = domain + "\\" + owner
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}".format(self.sep(), p.get("PROCESSNAME"), p.get("ID"), p.get("PRIORITY") or "", owner, p.get("PRODUCT") or "", p.get("PRODUCTVERSION") or "", p.get("DESCRIPTION") or "", p.get("COMPANY") or "", p.get("PATH") or "", p.get("CMD") or ""))
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}{0}{11}".format(self.sep(), self.name(), p.get("PROCESSNAME"), p.get("ID"), p.get("PRIORITY") or "", owner, p.get("PRODUCT") or "", p.get("PRODUCTVERSION") or "", p.get("DESCRIPTION") or "", p.get("COMPANY") or "", p.get("PATH") or "", p.get("CMD") or ""))
         return True
 
     def doStop(self, p):
@@ -249,15 +253,15 @@ class Process(Mode):
         return flag_dirty
 
     def doPrintHeader(self):
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}".format(self.sep(), "name", "pid", "priority", "owner", "product", "version", "description", "company", "path", "command"))
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}{0}{11}".format(self.sep(), "mode", "name", "pid", "priority", "owner", "product", "version", "description", "company", "path", "command"))
 
 class Application(Mode):
         
     def __init__(self):
-        super().__init__()
+        super().__init__("application")
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
-        self.object_func_list[Mode.OpIndex.SHOW] = self.doShow
-        self.header_func_list[Mode.OpIndex.SHOW] = self.doPrintHeader
+        self.object_func_list[Mode.OpIndex.INFO] = self.doInfo
+        self.header_func_list[Mode.OpIndex.INFO] = self.doPrintHeader
         self.object_func_list[Mode.OpIndex.START] = self.doStart
         self.name_key_u = "NAME"
 
@@ -266,11 +270,12 @@ class Application(Mode):
         return PSArray().build(cmd, self.name_key_u, self.target, self.flag_exact)
 
     def doList(self, o):
-        print(o.get("NAME"))
+        print("{1}{0}{2}".format(self.sep(), self.name(), o.get("NAME")))
         return True
 
-    def doShow(self, o):
-        print("{1}{0}{2}".format(self.sep(), o.get("NAME"), o.get("PATH")))
+    def doInfo(self, o):
+
+        print("{1}{0}{2}{0}{3}".format(self.sep(), self.name(), o.get("NAME"), o.get("PATH")))
         return True
 
     def doStart(self, o):
@@ -284,15 +289,15 @@ class Application(Mode):
         return flag_dirty
 
     def doPrintHeader(self):
-        print("{1}{0}{2}".format(self.sep(), "name", "path"))
+        print("{1}{0}{2}{0}{3}".format(self.sep(), "mode", "name", "path"))
 
 class Installed(Mode):
         
     def __init__(self):
-        super().__init__()
+        super().__init__("installed")
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
-        self.object_func_list[Mode.OpIndex.SHOW] = self.doShow
-        self.header_func_list[Mode.OpIndex.SHOW] = self.doPrintHeader
+        self.object_func_list[Mode.OpIndex.INFO] = self.doInfo
+        self.header_func_list[Mode.OpIndex.INFO] = self.doPrintHeader
         self.object_func_list[Mode.OpIndex.REMOVE] = self.doRemove
         self.name_key_u = "NAME"
 
@@ -303,12 +308,12 @@ class Installed(Mode):
     def doList(self, o):
         flag_dirty = False
         if len(o.get("NAME")) > 0:
-            print(o.get("NAME"))
+            print("{1}{0}{2}".format(self.sep(), self.name(), o.get("NAME")))
             flag_dirty = True
         return flag_dirty
 
-    def doShow(self, o):
-        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), o.get("NAME") or "", o.get("VERSION") or "", o.get("PUBLISHER") or "", o.get("UNINSTALL") or ""))
+    def doInfo(self, o):
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}".format(self.sep(), self.name(), o.get("NAME") or "", o.get("VERSION") or "", o.get("PUBLISHER") or "", o.get("UNINSTALL") or ""))
         return True
 
     def doRemove(self, o):
@@ -322,15 +327,15 @@ class Installed(Mode):
         return flag_dirty
 
     def doPrintHeader(self):
-        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), "name", "version", "publisher", "uninstall"))
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}".format(self.sep(), "mode", "name", "version", "publisher", "uninstall"))
 
 class Package(Mode):
 
     def __init__(self):
-        super().__init__()
+        super().__init__("package")
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
-        self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
-        self.header_func_list[Mode.OpIndex.SHOW] = self.doPrintHeader
+        self.property_func_list[Mode.OpIndex.INFO] = self.doInfo
+        self.header_func_list[Mode.OpIndex.INFO] = self.doPrintHeader
         self.property_func_list[Mode.OpIndex.START] = self.doStart
         self.object_func_list[Mode.OpIndex.REMOVE] = self.doRemove
         self.name_key_u = "NAME"
@@ -349,11 +354,11 @@ class Package(Mode):
         return PSArray().build(cmd, self.name_key_u)
 
     def doList(self, o):
-        print(o.get("NAME"))
+        print("{1}{0}{2}".format(self.sep(), self.name(), o.get("NAME")))
         return True
 
-    def doShow(self, p):
-        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), p.get("NAME"), p.get("PACKAGEFULLNAME"), p.get("PUBLISHERDISPLAYNAME") or "", p.get("EXECUTABLE") or ""))
+    def doInfo(self, p):
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}".format(self.sep(), self.name(), p.get("NAME"), p.get("PACKAGEFULLNAME"), p.get("PUBLISHERDISPLAYNAME") or "", p.get("EXECUTABLE") or ""))
         return True
 
     def doStart(self, p):
@@ -382,15 +387,15 @@ class Package(Mode):
         return flag_dirty
 
     def doPrintHeader(self):
-        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), "name", "package", "publisher", "executable"))
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}".format(self.sep(), "mode", "name", "package", "publisher", "executable"))
 
 class Service(Mode):
 
     def __init__(self):
-        super().__init__()
+        super().__init__("service")
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
-        self.property_func_list[Mode.OpIndex.SHOW] = self.doShow
-        self.header_func_list[Mode.OpIndex.SHOW] = self.doPrintHeader
+        self.property_func_list[Mode.OpIndex.INFO] = self.doInfo
+        self.header_func_list[Mode.OpIndex.INFO] = self.doPrintHeader
         self.property_func_list[Mode.OpIndex.START] = self.doStart
         self.property_func_list[Mode.OpIndex.STOP] = self.doStop
         self.name_key_u = "DISPLAYNAME"
@@ -409,11 +414,11 @@ class Service(Mode):
         return PSArray().build(cmd, self.name_key_u)
 
     def doList(self, o):
-        print(o.get("DISPLAYNAME"))
+        print("{1}{0}{2}".format(self.sep(), self.name(), o.get("DISPLAYNAME")))
         return True
 
-    def doShow(self, p):
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}".format(self.sep(), p.get("DISPLAYNAME"), p.get("NAME") or "", p.get("STARTMODE") or "", p.get("STATE") or "", p.get("PROCESSID") or "", p.get("PATHNAME") or ""))
+    def doInfo(self, p):
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}".format(self.sep(), self.name(), p.get("DISPLAYNAME"), p.get("NAME") or "", p.get("STARTMODE") or "", p.get("STATE") or "", p.get("PROCESSID") or "", p.get("PATHNAME") or ""))
         return True
 
     def doStart(self, p):
@@ -437,15 +442,15 @@ class Service(Mode):
         return flag_dirty
 
     def doPrintHeader(self):
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}".format(self.sep(), "name", "internal", "mode", "state", "pid", "path"))
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}".format(self.sep(), "mode", "name", "internal", "mode", "state", "pid", "path"))
 
 class Startup(Mode):
 
     def __init__(self):
-        super().__init__()
+        super().__init__("startup")
         self.object_func_list[Mode.OpIndex.LIST] = self.doList
-        self.object_func_list[Mode.OpIndex.SHOW] = self.doShow
-        self.header_func_list[Mode.OpIndex.SHOW] = self.doPrintHeader
+        self.object_func_list[Mode.OpIndex.INFO] = self.doInfo
+        self.header_func_list[Mode.OpIndex.INFO] = self.doPrintHeader
         self.object_func_list[Mode.OpIndex.START] = self.doStart
         self.object_func_list[Mode.OpIndex.STOP] = self.doStop
         self.name_key_u = "NAME"
@@ -482,11 +487,11 @@ class Startup(Mode):
         return o.get("LOCATION")
 
     def doList(self, o):
-        print(o.get("NAME"))
+        print("{1}{0}{2}".format(self.sep(), self.name(), o.get("NAME")))
         return True
 
-    def doShow(self, o):
-        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), o.get("NAME") or "", o.get("LOCATION") or "", self.state(o) or "", o.get("COMMAND") or ""))
+    def doInfo(self, o):
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}".format(self.sep(), self.name(), o.get("NAME") or "", o.get("LOCATION") or "", self.state(o) or "", o.get("COMMAND") or ""))
         return True
 
     def doStart(self, o):
@@ -526,55 +531,39 @@ class Startup(Mode):
         return flag_dirty
 
     def doPrintHeader(self):
-        print("{1}{0}{2}{0}{3}{0}{4}".format(self.sep(), "name", "location", "state", "command"))
+        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}".format(self.sep(), "mode", self.name(), "name", "location", "state", "command"))
 
 if __name__ == "__main__":
 
-    msg_desc = "Windows application control"
-    msg_epilog = """Example:
-  {0} p|process [list|show|stop [<name>]]
-  {0} a|appilcation [list|show|start [<name>]]
-  {0} ins|installed [list|show|remove [<name>]]
-  {0} pkg|package [list|show|start|remove [<name>]]
-  {0} svc|service [list|show|start|stop [<name>]]
-  {0} run|startup [list|show|start|stop [<name>]]""".format(os.path.basename(__file__))
-
-    parser = argparse.ArgumentParser(description=msg_desc, epilog=msg_epilog, formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("mode", help="""p|process     Running processes
-a|application Application programs in Shell:AppsFolder
-ins|installed Installed applications in 'Uninstall' registry
-pkg|package   Packages registered in Windows Store
-svc|service   Win32 Services
-run|startup   Startup programs in Shell startup, 'Run' registry and UWP""")
-    parser.add_argument("op", nargs="?", default=Mode.op_name_list[Mode.OpIndex.LIST], help="list|show|start|stop|remove")
+    parser = argparse.ArgumentParser(description="Windows application control")
     parser.add_argument("target", nargs="?", default=None, help="target name")
-    parser.add_argument("-s", "--separator", nargs=1, default=" ", help="field separator for output")
+    parser.add_argument("-a", "--application", dest="modes", action="append_const", const=Application(), help="mode: shell applications in 'Shell:AppsFolder'")
     parser.add_argument("-e", "--exact", action="store_true", help="only exact match")
-    parser.add_argument("-y", "--yes", action="store_true", help="assume yes")
     parser.add_argument("-H", "--print-header", action="store_true", help="print header")
+    parser.add_argument("-i", "--info", dest="op", action="store_const", const=Mode.OpIndex.INFO, help="operation: info")
+    parser.add_argument("-I", "--installed", dest="modes", action="append_const", const=Installed(), help="mode: installed packages in 'Uninstall' registry")
+    parser.add_argument("-l", "--list", dest="op", action="store_const", const=Mode.OpIndex.LIST, help="operation: list")
+    parser.add_argument("-p", "--process", dest="modes", action="append_const", const=Process(), help="mode: running processes")
+    parser.add_argument("-P", "--package", dest="modes", action="append_const", const=Package(), help="mode: Windows Store packages (UWP)")
+    parser.add_argument("-R", "--startup", dest="modes", action="append_const", const=Startup(), help="mode: shell startups in shell startup folders, 'Run' registry, and UWP configuration")
+    parser.add_argument("-s", "--separator", nargs=1, default=" ", help="field separator for output")
+    parser.add_argument("-S", "--service", dest="modes", action="append_const", const=Service(), help="mode: Win32 services")
+    parser.add_argument("-y", "--yes", action="store_true", help="assume yes")
+    parser.add_argument("-z", "--remove", dest="op", action="store_const", const=Mode.OpIndex.REMOVE, help="operation: remove")
+    parser.add_argument("-0", "--stop", dest="op", action="store_const", const=Mode.OpIndex.STOP, help="operation: stop")
+    parser.add_argument("-1", "--start", dest="op", action="store_const", const=Mode.OpIndex.START, help="operation: start")
     args = parser.parse_args()
 
-    mode_no = Mode.Index.NONE
-    mu = args.mode.upper()
-    for (i, c) in enumerate(Mode.name_list):
-        if mu == c:
-            mode_no = i
-    if mode_no == Mode.Index.NONE:
-        for (i, c) in enumerate(Mode.name_abbrev_list):
-            if mu == c:
-                mode_no = i
+    Mode.setTarget(args.target)
+    Mode.setSeparator(args.separator[0])
+    Mode.setFlags(args.exact, args.yes, args.print_header)
 
-    op_no = Mode.OpIndex.NONE
-    ou = args.op.upper()
-    for (i, c) in enumerate(Mode.op_name_list):
-        if ou == c:
-            op_no = i
+    if args.modes is None:
+        args.modes = [Application(), Package(), Installed(), Service(), Startup(), Process()]
+    if args.op is None:
+        args.op = Mode.OpIndex.LIST
 
-    if mode_no == Mode.Index.NONE or op_no == Mode.OpIndex.NONE:
-        parser.print_help(file=sys.stderr)
-        exit(errno.ENOENT)
-
-    mode_list = Mode.createModeList(args.target, args.separator[0], args.exact, args.yes, args.print_header)
-    ret_code =  mode_list[mode_no].op(op_no)
+    for m in args.modes:
+        ret_code =  m.op(args.op)
 
     exit(ret_code)

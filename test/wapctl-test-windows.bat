@@ -1,49 +1,49 @@
 python wapctl --help
 
-python wapctl pkg start calc -y
-python wapctl p
-python wapctl p list wap-name-which-does-not-exist
-python wapctl p list calc
-python wapctl p show calc -s, -H
-python wapctl p stop calculator -y
+python wapctl -pkg1 calc -y
+python wapctl -p
+python wapctl -pl wap-name-which-does-not-exist
+python wapctl -pl calc
+python wapctl -pi calc -s, -H
+python wapctl -p0 calculator -y
 
-python wapctl a
-python wapctl a list wap-name-which-does-not-exist
-python wapctl a list 電卓
-python wapctl a show 電卓 -s, -H
-python wapctl a start 電卓 -y
-python wapctl p show calculator -s, -H
-python wapctl p stop calculator -y
+python wapctl -a
+python wapctl -al wap-name-which-does-not-exist
+python wapctl -al 電卓
+python wapctl -ai 電卓 -s, -H
+python wapctl -a1 電卓 -y
+python wapctl -pi calculator -s, -H
+python wapctl -p0 calculator -y
 
-python wapctl ins
-python wapctl ins list wap-name-which-does-not-exist
-python wapctl ins list zoom
-python wapctl ins show zoom -s, -H
-python wapctl ins remove zoom
+python wapctl -I
+python wapctl -Il wap-name-which-does-not-exist
+python wapctl -Il zoom
+python wapctl -Ii zoom -s, -H
+python wapctl -Iz zoom
 
-python wapctl pkg
-python wapctl pkg list wap-name-which-does-not-exist
-python wapctl pkg list microsoft.microsoftedge
-python wapctl pkg show microsoft.microsoftedge -e -s, -H
-python wapctl pkg start microsoft.microsoftedge -e -y
-python wapctl p show msedge -s, -H
-python wapctl p stop msedge -y
-python wapctl pkg remove paint
+python wapctl -P
+python wapctl -Pl wap-name-which-does-not-exist
+python wapctl -Pl Microsoft.MicrosoftEdge
+python wapctl -Pi Microsoft.MicrosoftEdge -e -s, -H
+python wapctl -P1 Microsoft.MicrosoftEdge -e -y
+python wapctl -pi msedge -s, -H
+python wapctl -p0 msedge -y
+python wapctl -Pz paint
 
-python wapctl svc
-python wapctl svc list wap-name-which-does-not-exist
-python wapctl svc list docker
-python wapctl svc show docker -s, -H
-python wapctl svc stop docker -y
-python wapctl svc show docker -s, -H
-python wapctl svc start docker -y
-python wapctl svc show docker -s, -H
+python wapctl -S
+python wapctl -Sl wap-name-which-does-not-exist
+python wapctl -Sl docker
+python wapctl -Si docker -s, -H
+python wapctl -S0 docker -y
+python wapctl -Si docker -s, -H
+python wapctl -S1 docker -y
+python wapctl -Si docker -s, -H
 
-python wapctl run
-python wapctl run list wap-name-which-does-not-exist
-python wapctl run list docker
-python wapctl run show docker -s, -H
-python wapctl run stop docker -y
-python wapctl run show docker -s, -H
-python wapctl run start docker -y
-python wapctl run show docker -s, -H
+python wapctl -R
+python wapctl -Rl wap-name-which-does-not-exist
+python wapctl -Rl docker
+python wapctl -Ri docker -s, -H
+python wapctl -R0 docker -y
+python wapctl -Ri docker -s, -H
+python wapctl -R1 docker -y
+python wapctl -Ri docker -s, -H

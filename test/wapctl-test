@@ -4,53 +4,53 @@ which ./wapctl
 ./wapctl; echo Return-code: $?
 ./wapctl --help; echo Return-code: $?
 
-./wapctl pkg start calc -y; echo Return-code: $?
-./wapctl p; echo Return-code: $?
-./wapctl p list wap-name-which-does-not-exist; echo Return-code: $?
-./wapctl p list calc; echo Return-code: $?
-./wapctl p show calc -s, -H; echo Return-code: $?
-./wapctl p stop calculator -y; echo Return-code: $?
+./wapctl -P1 calc -y; echo Return-code: $?
+./wapctl -p; echo Return-code: $?
+./wapctl -pl wap-name-which-does-not-exist; echo Return-code: $?
+./wapctl -pl calc; echo Return-code: $?
+./wapctl -pi calc -s, -H; echo Return-code: $?
+./wapctl -p0 calculator -y; echo Return-code: $?
 
-./wapctl a; echo Return-code: $?
-./wapctl a list wap-name-which-does-not-exist; echo Return-code: $?
-./wapctl a list 電卓; echo Return-code: $?
-./wapctl a show 電卓 -s, -H; echo Return-code: $?
-./wapctl a start 電卓 -y; echo Return-code: $?
-./wapctl p show calculator -s, -H; echo Return-code: $?
-./wapctl p stop calculator -y; echo Return-code: $?
+./wapctl -a; echo Return-code: $?
+./wapctl -al wap-name-which-does-not-exist; echo Return-code: $?
+./wapctl -al 電卓; echo Return-code: $?
+./wapctl -ai 電卓 -s, -H; echo Return-code: $?
+./wapctl -a1 電卓 -y; echo Return-code: $?
+./wapctl -pi calculator -s, -H; echo Return-code: $?
+./wapctl -p0 calculator -y; echo Return-code: $?
 
-./wapctl ins; echo Return-code: $?
-./wapctl ins list wap-name-which-does-not-exist; echo Return-code: $?
-./wapctl ins list zoom; echo Return-code: $?
-./wapctl ins show zoom -s, -H; echo Return-code: $?
-./wapctl ins remove zoom; echo Return-code: $?
+./wapctl -I; echo Return-code: $?
+./wapctl -Il wap-name-which-does-not-exist; echo Return-code: $?
+./wapctl -Il zoom; echo Return-code: $?
+./wapctl -Ii zoom -s, -H; echo Return-code: $?
+./wapctl -Iz zoom; echo Return-code: $?
 
-./wapctl pkg; echo Return-code: $?
-./wapctl pkg list wap-name-which-does-not-exist; echo Return-code: $?
-./wapctl pkg list Microsoft.MicrosoftEdge; echo Return-code: $?
-./wapctl pkg show Microsoft.MicrosoftEdge -e -s, -H; echo Return-code: $?
-./wapctl pkg start Microsoft.MicrosoftEdge -e -y; echo Return-code: $?
-./wapctl p show msedge -s, -H; echo Return-code: $?
-./wapctl p stop msedge -y; echo Return-code: $?
-./wapctl pkg remove paint; echo Return-code: $?
+./wapctl -P; echo Return-code: $?
+./wapctl -Pl wap-name-which-does-not-exist; echo Return-code: $?
+./wapctl -Pl Microsoft.MicrosoftEdge; echo Return-code: $?
+./wapctl -Pi Microsoft.MicrosoftEdge -e -s, -H; echo Return-code: $?
+./wapctl -P1 Microsoft.MicrosoftEdge -e -y; echo Return-code: $?
+./wapctl -pi msedge -s, -H; echo Return-code: $?
+./wapctl -p0 msedge -y; echo Return-code: $?
+./wapctl -Pz paint; echo Return-code: $?
 
-./wapctl svc; echo Return-code: $?
-./wapctl svc list wap-name-which-does-not-exist; echo Return-code: $?
-./wapctl svc list docker; echo Return-code: $?
-./wapctl svc show docker -s, -H; echo Return-code: $?
-./wapctl svc stop docker -y; echo Return-code: $?
-./wapctl svc show docker -s, -H; echo Return-code: $?
-./wapctl svc start docker -y; echo Return-code: $?
-./wapctl svc show docker -s, -H; echo Return-code: $?
+./wapctl -S; echo Return-code: $?
+./wapctl -Sl wap-name-which-does-not-exist; echo Return-code: $?
+./wapctl -Sl docker; echo Return-code: $?
+./wapctl -Si docker -s, -H; echo Return-code: $?
+./wapctl -S0 docker -y; echo Return-code: $?
+./wapctl -Si docker -s, -H; echo Return-code: $?
+./wapctl -S1 docker -y; echo Return-code: $?
+./wapctl -Si docker -s, -H; echo Return-code: $?
 
-./wapctl run; echo Return-code: $?
-./wapctl run list wap-name-which-does-not-exist; echo Return-code: $?
-./wapctl run list docker; echo Return-code: $?
-./wapctl run show docker -s, -H; echo Return-code: $?
-./wapctl run stop docker -y; echo Return-code: $?
-./wapctl run show docker -s, -H; echo Return-code: $?
-./wapctl run start docker -y; echo Return-code: $?
-./wapctl run show docker -s, -H; echo Return-code: $?
+./wapctl -R; echo Return-code: $?
+./wapctl -Rl wap-name-which-does-not-exist; echo Return-code: $?
+./wapctl -Rl docker; echo Return-code: $?
+./wapctl -Ri docker -s, -H; echo Return-code: $?
+./wapctl -R0 docker -y; echo Return-code: $?
+./wapctl -Ri docker -s, -H; echo Return-code: $?
+./wapctl -R1 docker -y; echo Return-code: $?
+./wapctl -Ri docker -s, -H; echo Return-code: $?
 
 
 

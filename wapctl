@@ -586,6 +586,10 @@ if __name__ == "__main__":
     Mode.setSeparator(args.separator[0])
     Mode.setFlags(args.exact, args.yes, args.print_header)
 
+    if len(sys.argv) == 1:
+        printError(parser.format_usage())
+        exit(0)
+
     if args.modes is None:
         args.modes = [Application(), Package(), Installed(), Service(), Startup(), Process()]
     if args.op is None:

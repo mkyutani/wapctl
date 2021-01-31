@@ -542,7 +542,7 @@ if __name__ == "__main__":
             actions = sorted(actions, key=attrgetter("option_strings"))
             super(SortingHelpFormatter, self).add_arguments(actions)
 
-    parser = argparse.ArgumentParser(description="Windows application control", formatter_class=SortingHelpFormatter)
+    parser = argparse.ArgumentParser(description="Windows application control", usage="%(prog)s [options] [target]", formatter_class=SortingHelpFormatter)
     parser.add_argument("target", nargs="?", default=None, help="target name")
 
     # modes

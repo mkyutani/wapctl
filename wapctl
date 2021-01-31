@@ -6,7 +6,6 @@ import io
 import os
 import re
 import sys
-import argparse
 import platform
 import subprocess
 from enum import IntEnum
@@ -535,23 +534,38 @@ class Startup(Mode):
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="Windows application control")
+    import argparse
+    from argparse import HelpFormatter
+    from operator import attrgetter
+    class SortingHelpFormatter(HelpFormatter):
+        def add_arguments(self, actions):
+            actions = sorted(actions, key=attrgetter("option_strings"))
+            super(SortingHelpFormatter, self).add_arguments(actions)
+
+    parser = argparse.ArgumentParser(description="Windows application control", formatter_class=SortingHelpFormatter)
     parser.add_argument("target", nargs="?", default=None, help="target name")
+
+    # modes
     parser.add_argument("-a", "--application", dest="modes", action="append_const", const=Application(), help="mode: shell applications in 'Shell:AppsFolder'")
-    parser.add_argument("-e", "--exact", action="store_true", help="only exact match")
-    parser.add_argument("-H", "--print-header", action="store_true", help="print header")
-    parser.add_argument("-i", "--info", dest="op", action="store_const", const=Mode.OpIndex.INFO, help="operation: info")
-    parser.add_argument("-I", "--installed", dest="modes", action="append_const", const=Installed(), help="mode: installed packages in 'Uninstall' registry")
-    parser.add_argument("-l", "--list", dest="op", action="store_const", const=Mode.OpIndex.LIST, help="operation: list")
-    parser.add_argument("-p", "--process", dest="modes", action="append_const", const=Process(), help="mode: running processes")
     parser.add_argument("-P", "--package", dest="modes", action="append_const", const=Package(), help="mode: Windows Store packages (UWP)")
+    parser.add_argument("-I", "--installed", dest="modes", action="append_const", const=Installed(), help="mode: installed packages in 'Uninstall' registry")
     parser.add_argument("-R", "--startup", dest="modes", action="append_const", const=Startup(), help="mode: shell startups in shell startup folders, 'Run' registry, and UWP configuration")
-    parser.add_argument("-s", "--separator", nargs=1, default=" ", help="field separator for output")
     parser.add_argument("-S", "--service", dest="modes", action="append_const", const=Service(), help="mode: Win32 services")
-    parser.add_argument("-y", "--yes", action="store_true", help="assume yes")
-    parser.add_argument("-z", "--remove", dest="op", action="store_const", const=Mode.OpIndex.REMOVE, help="operation: remove")
+    parser.add_argument("-p", "--process", dest="modes", action="append_const", const=Process(), help="mode: running processes")
+
+    # operations
+    parser.add_argument("-l", "--list", dest="op", action="store_const", const=Mode.OpIndex.LIST, help="operation: list")
+    parser.add_argument("-i", "--info", dest="op", action="store_const", const=Mode.OpIndex.INFO, help="operation: info")
     parser.add_argument("-0", "--stop", dest="op", action="store_const", const=Mode.OpIndex.STOP, help="operation: stop")
     parser.add_argument("-1", "--start", dest="op", action="store_const", const=Mode.OpIndex.START, help="operation: start")
+    parser.add_argument("-z", "--remove", dest="op", action="store_const", const=Mode.OpIndex.REMOVE, help="operation: remove")
+
+    # misc options
+    parser.add_argument("-s", "--separator", nargs=1, default=" ", help="field separator for output")
+    parser.add_argument("-e", "--exact", action="store_true", help="only exact match")
+    parser.add_argument("-H", "--print-header", action="store_true", help="print header")
+    parser.add_argument("-y", "--yes", action="store_true", help="assume yes")
+
     args = parser.parse_args()
 
     Mode.setTarget(args.target)

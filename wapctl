@@ -11,6 +11,21 @@ import subprocess
 from enum import IntEnum
 from subprocess import PIPE, DEVNULL
 
+def printMsg(msg):
+    print(msg)
+
+def printWarning(msg):
+    print(msg, file=sys.stderr)
+
+def printError(msg):
+    print(msg, file=sys.stderr)
+
+def confirm(msg, no_by_default = False):
+    if no_by_default == True:
+        return input(msg + " [y/N] ").strip() == "y"
+    else:
+        return input(msg + " [Y/n] ").strip() != "n"
+
 class Shell:
 
     def traditional(cmd):
@@ -165,19 +180,16 @@ class Mode:
             return True
         if self.target is None:
             message = "All {0} targets, ok?".format(self.name())
-            return input(message + " [y/N] ").strip() == "y"
+            return confirm(message, True)
 
     def confirm(self, op_name, name, value, no_by_default = False):
         if self.flag_yes:
             return True
         message = "{1} {2} {0} ({3}), ok?".format(self.name(), op_name, name, value)
-        if no_by_default == True:
-            return input(message + " [y/N] ").strip() == "y"
-        else:
-            return input(message + " [Y/n] ").strip() != "n"
+        return confirm(message, no_by_default)
 
     def warningNoCommandCandidates(self, name):
-        print("{1} {0}: No command candidates found.".format(self.name(), name), file=sys.stderr)
+        printWarning("{1} {0}: No command candidates found.".format(self.name(), name))
 
     def op(self, op_no):
         if op_no == Mode.OpIndex.NONE or op_no >= Mode.OpIndex.MAX:
@@ -233,7 +245,7 @@ class Process(Mode):
         return PSArray().build(cmd, self.name_key_u)
 
     def doList(self, o):
-        print("{1}{0}{2}".format(self.sep(), self.name(), o.get("PROCESSNAME")))
+        printMsg("{1}{0}{2}".format(self.sep(), self.name(), o.get("PROCESSNAME")))
         return True
 
     def doInfo(self, p):
@@ -241,7 +253,7 @@ class Process(Mode):
         owner = p.get("USER") or ""
         if domain is not None:
             owner = domain + "\\" + owner
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}{0}{11}".format(self.sep(), self.name(), p.get("PROCESSNAME"), p.get("ID"), p.get("PRIORITY") or "", owner, p.get("PRODUCT") or "", p.get("PRODUCTVERSION") or "", p.get("DESCRIPTION") or "", p.get("COMPANY") or "", p.get("PATH") or "", p.get("CMD") or ""))
+        printMsg("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}{0}{11}".format(self.sep(), self.name(), p.get("PROCESSNAME"), p.get("ID"), p.get("PRIORITY") or "", owner, p.get("PRODUCT") or "", p.get("PRODUCTVERSION") or "", p.get("DESCRIPTION") or "", p.get("COMPANY") or "", p.get("PATH") or "", p.get("CMD") or ""))
         return True
 
     def doStop(self, p):
@@ -252,7 +264,7 @@ class Process(Mode):
         return flag_dirty
 
     def doPrintHeader(self):
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}{0}{11}".format(self.sep(), "mode", "name", "pid", "priority", "owner", "product", "version", "description", "company", "path", "command"))
+        printMsg("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}{0}{8}{0}{9}{0}{10}{0}{11}".format(self.sep(), "mode", "name", "pid", "priority", "owner", "product", "version", "description", "company", "path", "command"))
 
 class Application(Mode):
         
@@ -269,12 +281,12 @@ class Application(Mode):
         return PSArray().build(cmd, self.name_key_u, self.target, self.flag_exact)
 
     def doList(self, o):
-        print("{1}{0}{2}".format(self.sep(), self.name(), o.get("NAME")))
+        printMsg("{1}{0}{2}".format(self.sep(), self.name(), o.get("NAME")))
         return True
 
     def doInfo(self, o):
 
-        print("{1}{0}{2}{0}{3}".format(self.sep(), self.name(), o.get("NAME"), o.get("PATH")))
+        printMsg("{1}{0}{2}{0}{3}".format(self.sep(), self.name(), o.get("NAME"), o.get("PATH")))
         return True
 
     def doStart(self, o):
@@ -288,7 +300,7 @@ class Application(Mode):
         return flag_dirty
 
     def doPrintHeader(self):
-        print("{1}{0}{2}{0}{3}".format(self.sep(), "mode", "name", "path"))
+        printMsg("{1}{0}{2}{0}{3}".format(self.sep(), "mode", "name", "path"))
 
 class Installed(Mode):
         
@@ -307,12 +319,12 @@ class Installed(Mode):
     def doList(self, o):
         flag_dirty = False
         if len(o.get("NAME")) > 0:
-            print("{1}{0}{2}".format(self.sep(), self.name(), o.get("NAME")))
+            printMsg("{1}{0}{2}".format(self.sep(), self.name(), o.get("NAME")))
             flag_dirty = True
         return flag_dirty
 
     def doInfo(self, o):
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}".format(self.sep(), self.name(), o.get("NAME") or "", o.get("VERSION") or "", o.get("PUBLISHER") or "", o.get("UNINSTALL") or ""))
+        printMsg("{1}{0}{2}{0}{3}{0}{4}{0}{5}".format(self.sep(), self.name(), o.get("NAME") or "", o.get("VERSION") or "", o.get("PUBLISHER") or "", o.get("UNINSTALL") or ""))
         return True
 
     def doRemove(self, o):
@@ -326,7 +338,7 @@ class Installed(Mode):
         return flag_dirty
 
     def doPrintHeader(self):
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}".format(self.sep(), "mode", "name", "version", "publisher", "uninstall"))
+        printMsg("{1}{0}{2}{0}{3}{0}{4}{0}{5}".format(self.sep(), "mode", "name", "version", "publisher", "uninstall"))
 
 class Package(Mode):
 
@@ -353,11 +365,11 @@ class Package(Mode):
         return PSArray().build(cmd, self.name_key_u)
 
     def doList(self, o):
-        print("{1}{0}{2}".format(self.sep(), self.name(), o.get("NAME")))
+        printMsg("{1}{0}{2}".format(self.sep(), self.name(), o.get("NAME")))
         return True
 
     def doInfo(self, p):
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}".format(self.sep(), self.name(), p.get("NAME"), p.get("PACKAGEFULLNAME"), p.get("PUBLISHERDISPLAYNAME") or "", p.get("EXECUTABLE") or ""))
+        printMsg("{1}{0}{2}{0}{3}{0}{4}{0}{5}".format(self.sep(), self.name(), p.get("NAME"), p.get("PACKAGEFULLNAME"), p.get("PUBLISHERDISPLAYNAME") or "", p.get("EXECUTABLE") or ""))
         return True
 
     def doStart(self, p):
@@ -386,7 +398,7 @@ class Package(Mode):
         return flag_dirty
 
     def doPrintHeader(self):
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}".format(self.sep(), "mode", "name", "package", "publisher", "executable"))
+        printMsg("{1}{0}{2}{0}{3}{0}{4}{0}{5}".format(self.sep(), "mode", "name", "package", "publisher", "executable"))
 
 class Service(Mode):
 
@@ -413,11 +425,11 @@ class Service(Mode):
         return PSArray().build(cmd, self.name_key_u)
 
     def doList(self, o):
-        print("{1}{0}{2}".format(self.sep(), self.name(), o.get("DISPLAYNAME")))
+        printMsg("{1}{0}{2}".format(self.sep(), self.name(), o.get("DISPLAYNAME")))
         return True
 
     def doInfo(self, p):
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}".format(self.sep(), self.name(), p.get("DISPLAYNAME"), p.get("NAME") or "", p.get("STARTMODE") or "", p.get("STATE") or "", p.get("PROCESSID") or "", p.get("PATHNAME") or ""))
+        printMsg("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}".format(self.sep(), self.name(), p.get("DISPLAYNAME"), p.get("NAME") or "", p.get("STARTMODE") or "", p.get("STATE") or "", p.get("PROCESSID") or "", p.get("PATHNAME") or ""))
         return True
 
     def doStart(self, p):
@@ -441,7 +453,7 @@ class Service(Mode):
         return flag_dirty
 
     def doPrintHeader(self):
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}".format(self.sep(), "mode", "name", "internal", "mode", "state", "pid", "path"))
+        printMsg("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}{0}{7}".format(self.sep(), "mode", "name", "internal", "mode", "state", "pid", "path"))
 
 class Startup(Mode):
 
@@ -486,11 +498,11 @@ class Startup(Mode):
         return o.get("LOCATION")
 
     def doList(self, o):
-        print("{1}{0}{2}".format(self.sep(), self.name(), o.get("NAME")))
+        printMsg("{1}{0}{2}".format(self.sep(), self.name(), o.get("NAME")))
         return True
 
     def doInfo(self, o):
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}".format(self.sep(), self.name(), o.get("NAME") or "", o.get("LOCATION") or "", self.state(o) or "", o.get("COMMAND") or ""))
+        printMsg("{1}{0}{2}{0}{3}{0}{4}{0}{5}".format(self.sep(), self.name(), o.get("NAME") or "", o.get("LOCATION") or "", self.state(o) or "", o.get("COMMAND") or ""))
         return True
 
     def doStart(self, o):
@@ -530,7 +542,7 @@ class Startup(Mode):
         return flag_dirty
 
     def doPrintHeader(self):
-        print("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}".format(self.sep(), "mode", self.name(), "name", "location", "state", "command"))
+        printMsg("{1}{0}{2}{0}{3}{0}{4}{0}{5}{0}{6}".format(self.sep(), "mode", self.name(), "name", "location", "state", "command"))
 
 if __name__ == "__main__":
 

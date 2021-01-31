@@ -557,7 +557,9 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--list", dest="op", action="store_const", const=Mode.OpIndex.LIST, help="operation: list")
     parser.add_argument("-i", "--info", dest="op", action="store_const", const=Mode.OpIndex.INFO, help="operation: info")
     parser.add_argument("-0", "--stop", dest="op", action="store_const", const=Mode.OpIndex.STOP, help="operation: stop")
+    parser.add_argument("-k", "--kill", dest="op", action="store_const", const=Mode.OpIndex.STOP, help="operation: stop")
     parser.add_argument("-1", "--start", dest="op", action="store_const", const=Mode.OpIndex.START, help="operation: start")
+    parser.add_argument("-x", "--execute", dest="op", action="store_const", const=Mode.OpIndex.START, help="operation: start")
     parser.add_argument("-z", "--remove", dest="op", action="store_const", const=Mode.OpIndex.REMOVE, help="operation: remove")
 
     # misc options

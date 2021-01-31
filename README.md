@@ -275,10 +275,14 @@ Disable Docker Desktop startup (enabled), ok? [Y/n]
 * --remove
   * operation: remove
 * -0
+* -k
 * --stop
+* --kill
   * operation: stop
 * -1
+* -x
 * --start
+* --execute
   * operation: start
 
 ## RETURN_CODE

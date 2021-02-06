@@ -21,10 +21,14 @@ def printError(msg):
     print(msg, file=sys.stderr)
 
 def confirm(msg, no_by_default = False):
+    stdout_current = sys.stdout
+    sys.stdout = sys.stderr
     if no_by_default == True:
-        return input(msg + " [y/N] ").strip() == "y"
+        yesno = input(msg + " [y/N] ").strip() == "y"
     else:
-        return input(msg + " [Y/n] ").strip() != "n"
+        yesno = input(msg + " [Y/n] ").strip() != "n"
+    sys.stdout = stdout_current
+    return yesno
 
 class Shell:
 

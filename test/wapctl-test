@@ -52,6 +52,5 @@ which ./wapctl
 ./wapctl -R1 docker -y; echo Return-code: $?
 ./wapctl -Ri docker -s, -H; echo Return-code: $?
 
-
-
-
+echo test for input\(\) to stderr
+./wapctl -pi | grep netsvcs

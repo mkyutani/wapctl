@@ -54,3 +54,7 @@ which ./wapctl
 
 echo test for input\(\) to stderr
 ./wapctl -pi | grep netsvcs
+
+echo test -W
+./wapctl -pi powershell
+./wapctl -piW powershell

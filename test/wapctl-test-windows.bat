@@ -49,3 +49,5 @@ python wapctl -R1 docker -y
 python wapctl -Ri docker -s, -H
 
 python wapctl -pi > wapctl-test-windows.log
+python wapctl -pi powershell
+python wapctl -piW powershell

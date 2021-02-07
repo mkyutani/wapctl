@@ -11,11 +11,15 @@ import subprocess
 from enum import IntEnum
 from subprocess import PIPE, DEVNULL
 
+no_warning = False
+ps_stderr = sys.stderr
+
 def printMsg(msg):
     print(msg)
 
 def printWarning(msg):
-    print(msg, file=sys.stderr)
+    if no_warning is False:
+        print(msg, file=sys.stderr)
 
 def printError(msg):
     print(msg, file=sys.stderr)
@@ -34,13 +38,16 @@ class Shell:
 
     def traditional(cmd):
         cmdline = "cmd.exe /c " + cmd
-        subprocess.Popen(cmdline, shell=True, stdout=DEVNULL)
+        subprocess.Popen(cmdline, shell=True, stdout=DEVNULL, stderr=ps_stderr)
 
     def ps(cmd):
         cmdline = "powershell.exe -command \"& {" + cmd + "}\""
         if platform.system() == "Windows":
             cmdline = cmdline.replace("\$", "$")
-        proc = subprocess.Popen(cmdline, shell=True, stdout=PIPE)
+            stderr = DEVNULL
+        else:
+            stderr = ps_stderr
+        proc = subprocess.Popen(cmdline, shell=True, stdout=PIPE, stderr=stderr)
         out, err = proc.communicate()
         return out
 
@@ -245,7 +252,7 @@ class Process(Mode):
         for o in olist:
             idlist = idlist + sep + o.get("ID")
             sep = ","
-        cmd = "get-process -id " + idlist + " -erroraction silentlycontinue |%{ \$p = \$_; \$x = \$_.id; get-ciminstance -classname Win32_Process -namespace root\\cimv2 -filter \\\"processid = \$x\\\" |%{ \$u = (invoke-cimmethod -inputobject \$_ -methodname getowner); [pscustomobject]@{ id = \$p.id; processname = \$p.processname; domain = \$u.domain; user = \$u.user; path = \$_.executablepath; cmd = \$_.commandline; priority = \$_.priority; product = \$p.product; productversion = \$p.productversion; company = \$p.company; description = \$p.description }}}"
+        cmd = "get-process -id " + idlist + " |%{ \$p = \$_; \$x = \$_.id; get-ciminstance -classname Win32_Process -namespace root\\cimv2 -filter \\\"processid = \$x\\\" |%{ \$u = (invoke-cimmethod -inputobject \$_ -methodname getowner); [pscustomobject]@{ id = \$p.id; processname = \$p.processname; domain = \$u.domain; user = \$u.user; path = \$_.executablepath; cmd = \$_.commandline; priority = \$_.priority; product = \$p.product; productversion = \$p.productversion; company = \$p.company; description = \$p.description }}}"
         return PSArray().build(cmd, self.name_key_u)
 
     def doList(self, o):
@@ -583,12 +590,16 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--exact", action="store_true", help="only exact match")
     parser.add_argument("-H", "--print-header", action="store_true", help="print header")
     parser.add_argument("-y", "--yes", action="store_true", help="assume yes")
+    parser.add_argument("-W", "--no-warning", action="store_true", help="NOT print any warnings")
 
     args = parser.parse_args()
 
     Mode.setTarget(args.target)
     Mode.setSeparator(args.separator[0])
     Mode.setFlags(args.exact, args.yes, args.print_header)
+    if args.no_warning is True:
+        no_warning = True
+        ps_stderr = DEVNULL
 
     if len(sys.argv) == 1:
         printError(parser.format_usage())

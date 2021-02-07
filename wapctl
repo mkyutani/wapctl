@@ -11,8 +11,8 @@ import subprocess
 from enum import IntEnum
 from subprocess import PIPE, DEVNULL
 
-no_warning = False
-ps_stderr = sys.stderr
+no_warning = True
+ps_stderr = DEVNULL
 
 def printMsg(msg):
     print(msg)
@@ -593,7 +593,7 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--exact", action="store_true", help="only exact match")
     parser.add_argument("-H", "--print-header", action="store_true", help="print header")
     parser.add_argument("-y", "--yes", action="store_true", help="assume yes")
-    parser.add_argument("-W", "--no-warning", action="store_true", help="NOT print any warnings")
+    parser.add_argument("-W", "--warning", action="store_true", help="print warnings")
 
     if len(sys.argv) == 1:
         printError(parser.format_usage())
@@ -604,9 +604,9 @@ if __name__ == "__main__":
     Mode.setTarget(args.target)
     Mode.setSeparator(args.separator[0])
     Mode.setFlags(args.exact, args.yes, args.print_header)
-    if args.no_warning is True:
-        no_warning = True
-        ps_stderr = DEVNULL
+    if args.warning is True:
+        no_warning = False
+        ps_stderr = sys.stderr
 
     if args.modes is None:
         args.modes = [Application(), Package(), Installed(), Service(), Startup(), Process()]

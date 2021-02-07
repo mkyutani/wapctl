@@ -1,6 +1,6 @@
 python wapctl --help
 
-python wapctl -pkg1 calc -y
+python wapctl -P1 calc -y
 python wapctl -p
 python wapctl -pl wap-name-which-does-not-exist
 python wapctl -pl calc

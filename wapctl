@@ -202,6 +202,9 @@ class Mode:
     def warningNoCommandCandidates(self, name):
         printWarning("{1} {0}: No command candidates found.".format(self.name(), name))
 
+    def test(self, op_no):
+        return self.object_func_list[op_no] is not None or self.property_func_list[op_no] is not None
+
     def op(self, op_no):
         if op_no == Mode.OpIndex.NONE or op_no >= Mode.OpIndex.MAX:
             return errno.ENOENT
@@ -616,7 +619,11 @@ if __name__ == "__main__":
         printError("Expected only one operation.")
         exit(errno.EPERM)
 
+    ret_code = 0
     for m in args.modes:
-        ret_code =  m.op(op)
+        if m.test(op) is False:
+            printWarning("{}: No operation is defined.".format(m.name()))
+        else:
+            ret_code =  m.op(op)
 
     exit(ret_code)

@@ -577,13 +577,13 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--process", dest="modes", action="append_const", const=Process(), help="mode: running processes")
 
     # operations
-    parser.add_argument("-l", "--list", dest="op", action="store_const", const=Mode.OpIndex.LIST, help="operation: list")
-    parser.add_argument("-i", "--info", dest="op", action="store_const", const=Mode.OpIndex.INFO, help="operation: info")
-    parser.add_argument("-0", "--stop", dest="op", action="store_const", const=Mode.OpIndex.STOP, help="operation: stop")
-    parser.add_argument("-k", "--kill", dest="op", action="store_const", const=Mode.OpIndex.STOP, help="operation: stop")
-    parser.add_argument("-1", "--start", dest="op", action="store_const", const=Mode.OpIndex.START, help="operation: start")
-    parser.add_argument("-x", "--execute", dest="op", action="store_const", const=Mode.OpIndex.START, help="operation: start")
-    parser.add_argument("-z", "--remove", dest="op", action="store_const", const=Mode.OpIndex.REMOVE, help="operation: remove")
+    parser.add_argument("-l", "--list", dest="ops", action="append_const", const=Mode.OpIndex.LIST, help="operation: list")
+    parser.add_argument("-i", "--info", dest="ops", action="append_const", const=Mode.OpIndex.INFO, help="operation: info")
+    parser.add_argument("-0", "--stop", dest="ops", action="append_const", const=Mode.OpIndex.STOP, help="operation: stop")
+    parser.add_argument("-k", "--kill", dest="ops", action="append_const", const=Mode.OpIndex.STOP, help="operation: stop")
+    parser.add_argument("-1", "--start", dest="ops", action="append_const", const=Mode.OpIndex.START, help="operation: start")
+    parser.add_argument("-x", "--execute", dest="ops", action="append_const", const=Mode.OpIndex.START, help="operation: start")
+    parser.add_argument("-z", "--remove", dest="ops", action="append_const", const=Mode.OpIndex.REMOVE, help="operation: remove")
 
     # misc options
     parser.add_argument("-s", "--separator", nargs=1, default=" ", help="field separator for output")
@@ -591,6 +591,10 @@ if __name__ == "__main__":
     parser.add_argument("-H", "--print-header", action="store_true", help="print header")
     parser.add_argument("-y", "--yes", action="store_true", help="assume yes")
     parser.add_argument("-W", "--no-warning", action="store_true", help="NOT print any warnings")
+
+    if len(sys.argv) == 1:
+        printError(parser.format_usage())
+        exit(0)
 
     args = parser.parse_args()
 
@@ -601,16 +605,18 @@ if __name__ == "__main__":
         no_warning = True
         ps_stderr = DEVNULL
 
-    if len(sys.argv) == 1:
-        printError(parser.format_usage())
-        exit(0)
-
     if args.modes is None:
         args.modes = [Application(), Package(), Installed(), Service(), Startup(), Process()]
-    if args.op is None:
-        args.op = Mode.OpIndex.LIST
+
+    if args.ops is None:
+        op = Mode.OpIndex.LIST
+    elif len(args.ops) == 1:
+        op = args.ops[0]
+    else:
+        printError("Expected only one operation.")
+        exit(errno.EPERM)
 
     for m in args.modes:
-        ret_code =  m.op(args.op)
+        ret_code =  m.op(op)
 
     exit(ret_code)

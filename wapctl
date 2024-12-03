@@ -43,7 +43,7 @@ class Shell:
     def ps(cmd):
         cmdline = "powershell.exe -command \"& {" + cmd + "}\""
         if platform.system() == "Windows":
-            cmdline = cmdline.replace("\$", "$")
+            cmdline = cmdline.replace("\\$", "$")
             stderr = DEVNULL
         else:
             stderr = ps_stderr
@@ -255,7 +255,7 @@ class Process(Mode):
         for o in olist:
             idlist = idlist + sep + o.get("ID")
             sep = ","
-        cmd = "get-process -id " + idlist + " |%{ \$p = \$_; \$x = \$_.id; get-ciminstance -classname Win32_Process -namespace root\\cimv2 -filter \\\"processid = \$x\\\" |%{ \$u = (invoke-cimmethod -inputobject \$_ -methodname getowner); [pscustomobject]@{ id = \$p.id; processname = \$p.processname; domain = \$u.domain; user = \$u.user; path = \$_.executablepath; cmd = \$_.commandline; priority = \$_.priority; product = \$p.product; productversion = \$p.productversion; company = \$p.company; description = \$p.description }}}"
+        cmd = "get-process -id " + idlist + " |%{ \\$p = \\$_; \\$x = \\$_.id; get-ciminstance -classname Win32_Process -namespace root\\cimv2 -filter \\\"processid = \\$x\\\" |%{ \\$u = (invoke-cimmethod -inputobject \\$_ -methodname getowner); [pscustomobject]@{ id = \\$p.id; processname = \\$p.processname; domain = \\$u.domain; user = \\$u.user; path = \\$_.executablepath; cmd = \\$_.commandline; priority = \\$_.priority; product = \\$p.product; productversion = \\$p.productversion; company = \\$p.company; description = \\$p.description }}}"
         return PSArray().build(cmd, self.name_key_u)
 
     def doList(self, o):
@@ -327,7 +327,7 @@ class Installed(Mode):
         self.name_key_u = "NAME"
 
     def prepareObjectList(self):
-        cmd = "get-item (\\\"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\\\", \\\"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\\\", \\\"HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\\\") |%{ \$k = \$_; \$k.getvalue(\\\"UninstallString\\\") |% { if (\$_ -ne \$null) { [pscustomobject]@{ key = \$k.pspath; name = \$k.getvalue(\\\"DisplayName\\\"); version = \$k.getvalue(\\\"DisplayVersion\\\"); publisher = \$k.getvalue(\\\"Publisher\\\"); uninstall = \$_ }}}}"
+        cmd = "get-item (\\\"HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\\\", \\\"HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\\\", \\\"HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*\\\") |%{ \\$k = \\$_; \\$k.getvalue(\\\"UninstallString\\\") |% { if (\\$_ -ne \\$null) { [pscustomobject]@{ key = \\$k.pspath; name = \\$k.getvalue(\\\"DisplayName\\\"); version = \\$k.getvalue(\\\"DisplayVersion\\\"); publisher = \\$k.getvalue(\\\"Publisher\\\"); uninstall = \\$_ }}}}"
         return PSArray().build(cmd, self.name_key_u, self.target, self.flag_exact)
 
     def doList(self, o):
@@ -375,7 +375,7 @@ class Package(Mode):
         for o in olist:
             name_list = name_list + sep + "\\\"" + o.get("NAME") + "\\\""
             sep = ","
-        cmd = "(" + name_list + ") |%{ get-appxpackage -name \$_ |%{ try { \$x = \$_; \$q = (get-appxpackagemanifest -package \$x).package; \$p = \$q.properties; \$a = \$q.applications.application; [pscustomobject]@{ name = \$x.name; packagefullname = \$x.packagefullname; packagefamilyname = \$x.packagefamilyname; publisherdisplayname = \$p.publisherdisplayname; apid = \$a.id; executable = \$a.executable }} catch {}}}"
+        cmd = "(" + name_list + ") |%{ get-appxpackage -name \\$_ |%{ try { \\$x = \\$_; \\$q = (get-appxpackagemanifest -package \\$x).package; \\$p = \\$q.properties; \\$a = \\$q.applications.application; [pscustomobject]@{ name = \\$x.name; packagefullname = \\$x.packagefullname; packagefamilyname = \\$x.packagefamilyname; publisherdisplayname = \\$p.publisherdisplayname; apid = \\$a.id; executable = \\$a.executable }} catch {}}}"
         return PSArray().build(cmd, self.name_key_u)
 
     def doList(self, o):
@@ -391,7 +391,7 @@ class Package(Mode):
         if p.get("PACKAGEFAMILYNAME") is None:
             self.warningNoCommandCandidates(p.get("NAME"))
         else:
-            cmd = "\$e = (get-appxpackagemanifest -package \\\"" + p.get("PACKAGEFULLNAME") + "\\\").package.applications.application.id; if (\$e -ne \$null) { \$e = @() + \$e }; (.{foreach (\$i in \$e) {[pscustomobject]@{id=\$i}}})"
+            cmd = "\\$e = (get-appxpackagemanifest -package \\\"" + p.get("PACKAGEFULLNAME") + "\\\").package.applications.application.id; if (\\$e -ne \\$null) { \\$e = @() + \\$e }; (.{foreach (\\$i in \\$e) {[pscustomobject]@{id=\\$i}}})"
             exec_list = PSArray().build(cmd, "ID")
             if len(exec_list) > 0:
                 for x in exec_list:
@@ -481,7 +481,7 @@ class Startup(Mode):
         self.name_key_u = "NAME"
 
     def prepareObjectList(self):
-        cmd = "\$r = @(); \$ns = \\\"\\\\Software\\\\\\\"; \$nw = \\\"Microsoft\\\\Windows\\\\CurrentVersion\\\\\\\"; \$nr = \$nw + \\\"Run\\\"; \$ne = \\\":\\\" + \$ns + \$nw + \\\"Explorer\\\\StartupApproved\\\\*\\\"; \$nm = \\\"HKLM:\\\" + \$ns; \$nc = \\\"HKCU:\\\" + \$ns; \$l = @(\\\"User\\\", \\\"System\\\", \\\"WoW\\\"); \$e = @(\$nc, \$nm, (\$nm + \\\"Wow6432Node\\\\\\\")); \$f = @(\\\"\\\", \\\"Common \\\"); foreach (\$i in 0..2) { \$k = get-item (\$e[\$i] + \$nr); \$k.getvaluenames() |%{ \$r += [pscustomobject]@{ l = \\\"Run:\\\" + \$l[\$i]; n = \$_; c = \$k.getvalue(\$_) }}}; foreach (\$i in 0..1) { ((new-object -com shell.application).namespace(\\\"shell:\\\" + \$f[\$i] + \\\"Startup\\\").items() |%{ \$r += [pscustomobject]@{ l = \\\"Startup:\\\" + \$l[\$i]; n = \$_.name; c = \$_.path }})}; \$x = get-itemproperty (\\\"HKLM\\\" + \$ne), (\\\"HKCU\\\" + \$ne); \$nuwp = (\$r |? c -ne \\\"\\\" |%{ \$o = [pscustomobject]@{ location = \$_.l; name = \$_.n; disabled = 0; command = \$_.c; path = \$null }; \$x |%{ \$p = \$_.PSPath; \$_ | get-member -type noteproperty |? name -eq \$o.name |%{ \$v = get-itempropertyvalue \$p -name \$o.name; \$o.path = \$p; \$o.disabled = \$v[0] -band 1 }}; \$o }); \$uwp = (get-appxpackage |% { try { \$x = \$_; \$t = (get-appxpackagemanifest \$_).package.applications.application.extensions.extension |? category -like \\\"*.startuptask\\\"; if (\$t -ne \$null) { \$p = \$nc + \\\"Classes\\\\Local Settings\\\" + \$ns + \$nw + \\\"AppModel\\\\SystemAppData\\\\\\\" + \$x.packagefamilyname + \\\"\\\\\\\" + \$t.startuptask.taskid; \$s = (get-item \$p).getvalue(\\\"state\\\"); \$o = [pscustomobject]@{ location = \\\"UWP\\\"; name = \$x.name; disabled = \$s -band 1; command = \$x.installlocation + \\\"\\\\\\\" + \$t.executable; path = \$p }; \$o }} catch {}}); \$nuwp+\$uwp"
+        cmd = "\\$r = @(); \\$ns = \\\"\\\\Software\\\\\\\"; \\$nw = \\\"Microsoft\\\\Windows\\\\CurrentVersion\\\\\\\"; \\$nr = \\$nw + \\\"Run\\\"; \\$ne = \\\":\\\" + \\$ns + \\$nw + \\\"Explorer\\\\StartupApproved\\\\*\\\"; \\$nm = \\\"HKLM:\\\" + \\$ns; \\$nc = \\\"HKCU:\\\" + \\$ns; \\$l = @(\\\"User\\\", \\\"System\\\", \\\"WoW\\\"); \\$e = @(\\$nc, \\$nm, (\\$nm + \\\"Wow6432Node\\\\\\\")); \\$f = @(\\\"\\\", \\\"Common \\\"); foreach (\\$i in 0..2) { \\$k = get-item (\\$e[\\$i] + \\$nr); \\$k.getvaluenames() |%{ \\$r += [pscustomobject]@{ l = \\\"Run:\\\" + \\$l[\\$i]; n = \\$_; c = \\$k.getvalue(\\$_) }}}; foreach (\\$i in 0..1) { ((new-object -com shell.application).namespace(\\\"shell:\\\" + \\$f[\\$i] + \\\"Startup\\\").items() |%{ \\$r += [pscustomobject]@{ l = \\\"Startup:\\\" + \\$l[\\$i]; n = \\$_.name; c = \\$_.path }})}; \\$x = get-itemproperty (\\\"HKLM\\\" + \\$ne), (\\\"HKCU\\\" + \\$ne); \\$nuwp = (\\$r |? c -ne \\\"\\\" |%{ \\$o = [pscustomobject]@{ location = \\$_.l; name = \\$_.n; disabled = 0; command = \\$_.c; path = \\$null }; \\$x |%{ \\$p = \\$_.PSPath; \\$_ | get-member -type noteproperty |? name -eq \\$o.name |%{ \\$v = get-itempropertyvalue \\$p -name \\$o.name; \\$o.path = \\$p; \\$o.disabled = \\$v[0] -band 1 }}; \\$o }); \\$uwp = (get-appxpackage |% { try { \\$x = \\$_; \\$t = (get-appxpackagemanifest \\$_).package.applications.application.extensions.extension |? category -like \\\"*.startuptask\\\"; if (\\$t -ne \\$null) { \\$p = \\$nc + \\\"Classes\\\\Local Settings\\\" + \\$ns + \\$nw + \\\"AppModel\\\\SystemAppData\\\\\\\" + \\$x.packagefamilyname + \\\"\\\\\\\" + \\$t.startuptask.taskid; \\$s = (get-item \\$p).getvalue(\\\"state\\\"); \\$o = [pscustomobject]@{ location = \\\"UWP\\\"; name = \\$x.name; disabled = \\$s -band 1; command = \\$x.installlocation + \\\"\\\\\\\" + \\$t.executable; path = \\$p }; \\$o }} catch {}}); \\$nuwp+\\$uwp"
         object_list = PSArray().build(cmd, self.name_key_u, self.target, self.flag_exact)
         return sorted(object_list, key=lambda x:x["NAME"].upper())
 
@@ -530,10 +530,10 @@ class Startup(Mode):
                     flag_dirty = True
                 else:
                     if len(o.get("PATH")) > 0:
-                        Shell.ps("\$k = \\\"" + o.get("PATH") + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; \$v = get-itempropertyvalue \$k -name \$n; \$v[0] = \$v[0] -band 0xfe; set-itemproperty \$k -name \$n -value \$v")
+                        Shell.ps("\\$k = \\\"" + o.get("PATH") + "\\\"; \\$n = \\\"" + o.get("NAME") + "\\\"; \\$v = get-itempropertyvalue \\$k -name \\$n; \\$v[0] = \\$v[0] -band 0xfe; set-itemproperty \\$k -name \\$n -value \\$v")
                         flag_dirty = True
                     else:
-                        Shell.ps("\$k = \\\"" + self.buildStatePath(o) + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; set-itemproperty \$k -name \$n -value ([byte[]]@(2,0,0,0,0,0,0,0,0,0,0,0))")
+                        Shell.ps("\\$k = \\\"" + self.buildStatePath(o) + "\\\"; \\$n = \\\"" + o.get("NAME") + "\\\"; set-itemproperty \\$k -name \\$n -value ([byte[]]@(2,0,0,0,0,0,0,0,0,0,0,0))")
                         flag_dirty = True
         return flag_dirty
 
@@ -548,10 +548,10 @@ class Startup(Mode):
                     flag_dirty = True
                 else:
                     if len(o.get("PATH")) > 0:
-                        Shell.ps("\$k = \\\"" + o.get("PATH") + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; \$v = get-itempropertyvalue \$k -name \$n; \$v[0] = \$v[0] -bor 1; set-itemproperty \$k -name \$n -value \$v")
+                        Shell.ps("\\$k = \\\"" + o.get("PATH") + "\\\"; \\$n = \\\"" + o.get("NAME") + "\\\"; \\$v = get-itempropertyvalue \\$k -name \\$n; \\$v[0] = \\$v[0] -bor 1; set-itemproperty \\$k -name \\$n -value \\$v")
                         flag_dirty = True
                     else:
-                        Shell.ps("\$k = \\\"" + self.buildStatePath(o) + "\\\"; \$n = \\\"" + o.get("NAME") + "\\\"; set-itemproperty \$k -name \$n -value ([byte[]]@(1,0,0,0,0,0,0,0,0,0,0,0))")
+                        Shell.ps("\\$k = \\\"" + self.buildStatePath(o) + "\\\"; \\$n = \\\"" + o.get("NAME") + "\\\"; set-itemproperty \\$k -name \\$n -value ([byte[]]@(1,0,0,0,0,0,0,0,0,0,0,0))")
                         flag_dirty = True
         return flag_dirty
 
